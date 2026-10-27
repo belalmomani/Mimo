@@ -46,7 +46,7 @@ class StartIoRewardedProvider(private val appContext: Context) : RewardedAdProvi
             // Completion signal. Guard so one session can never report twice.
             if (!rewarded) { rewarded = true; finished = true; callback.onRewardEarned(sessionId) }
         })
-        val loaded = try {
+        try {
             ad.loadAd(StartAppAd.AdMode.REWARDED_VIDEO, object : AdEventListener {
                 override fun onReceiveAd(p0: Ad) {
                     try {
@@ -62,6 +62,5 @@ class StartIoRewardedProvider(private val appContext: Context) : RewardedAdProvi
         } catch (t: Throwable) {
             callback.onUnavailable(t.message ?: "load failed"); return
         }
-        if (!loaded) { if (!finished) { finished = true; callback.onUnavailable("loadAd rejected") } }
     }
 }
