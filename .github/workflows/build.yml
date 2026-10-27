@@ -1,0 +1,39 @@
+name: Build Mimo
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # No Gradle wrapper is committed yet: this installs the exact Gradle version AGP 8.7 needs.
+      # (Optional: run `gradle wrapper --gradle-version 8.10.2` once on a machine with internet and commit the wrapper.)
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+
+      - name: Unit tests (points / store / unlock logic)
+        run: gradle :app:testDebugUnitTest --stacktrace
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mimo-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # Release signing is intentionally NOT wired to any committed key. To publish: add a keystore as a GitHub secret,
+      # write keystore.properties in a step (storeFile/storePassword/keyAlias/keyPassword) and run :app:assembleRelease.

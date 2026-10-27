@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mimo</string>
+    <string name="app_tagline">رفيقك الرقمي العائم</string>
+
+    <string name="tab_home">الرئيسية</string>
+    <string name="tab_store">المتجر</string>
+    <string name="tab_mine">أشكالي</string>
+
+    <string name="points_balance">رصيدك: %1$d نقطة</string>
+    <string name="earn_points">شاهد إعلانًا واكسب نقاطًا</string>
+    <string name="earn_points_reward">+%1$d نقطة</string>
+    <string name="store_title">Mimo Store</string>
+    <string name="section_free">الأشكال المجانية</string>
+    <string name="section_ads">تُفتح بالإعلانات</string>
+    <string name="section_points">تُفتح بالنقاط</string>
+    <string name="section_featured">أشكال مميزة</string>
+    <string name="status_free">مجاني</string>
+    <string name="status_locked">مقفل</string>
+    <string name="status_owned">مملوك</string>
+    <string name="status_in_progress">%1$d/%2$d</string>
+    <string name="ads_remaining">متبقٍ %1$d إعلان</string>
+    <string name="cost_points">%1$d نقطة</string>
+    <string name="btn_try">تجربة</string>
+    <string name="btn_unlock">فتح الشكل</string>
+    <string name="btn_unlock_points">فتح مقابل %1$d نقطة</string>
+    <string name="btn_watch_for_skin">شاهد إعلانًا (%1$d/%2$d)</string>
+    <string name="btn_use">استخدام</string>
+    <string name="btn_in_use">قيد الاستخدام</string>
+    <string name="btn_confirm">تأكيد الفتح</string>
+    <string name="btn_cancel">إلغاء</string>
+    <string name="btn_close">إغلاق</string>
+    <string name="confirm_title">فتح %1$s</string>
+    <string name="confirm_current">الرصيد الحالي: %1$d نقطة</string>
+    <string name="confirm_cost">تكلفة الشكل: %1$d نقطة</string>
+    <string name="confirm_after">الرصيد بعد الفتح: %1$d نقطة</string>
+    <string name="trying_banner">تجربة مؤقتة — هذا الشكل غير مملوك بعد</string>
+
+    <string name="msg_unlocked">تم فتح الشكل</string>
+    <string name="msg_points_earned">تمت إضافة %1$d نقطة</string>
+    <string name="msg_progress">تقدّمك: %1$d/%2$d</string>
+    <string name="msg_not_enough">رصيدك %1$d والمطلوب %2$d. شاهد إعلانًا لتكسب نقاطًا.</string>
+    <string name="msg_ad_not_ready">لا يتوفر إعلان الآن، حاول لاحقًا.</string>
+    <string name="msg_ad_failed">تعذّر عرض الإعلان. لم يُخصم أي شيء.</string>
+    <string name="msg_ad_incomplete">لم يكتمل الإعلان، لذلك لم تُمنح مكافأة.</string>
+    <string name="msg_ads_disabled">مكافآت الإعلانات متوقفة حاليًا.</string>
+    <string name="msg_daily_limit">وصلت إلى الحد اليومي للإعلانات المكافئة. عُد غدًا.</string>
+    <string name="msg_too_soon">انتظر %1$d ثانية قبل المكافأة التالية.</string>
+    <string name="msg_error">حدث خطأ، لم يتغير رصيدك.</string>
+    <string name="msg_already_owned">هذا الشكل مملوك مسبقًا.</string>
+    <string name="msg_welcome">مكافأة ترحيبية: %1$d نقطة</string>
+
+    <string name="home_overlay_title">الشخصية العائمة</string>
+    <string name="home_overlay_desc">تظهر Mimo فوق التطبيقات الأخرى بالشكل الذي تختاره.</string>
+    <string name="overlay_start">إظهار Mimo</string>
+    <string name="overlay_stop">إخفاء Mimo</string>
+    <string name="overlay_permission_needed">يلزم إذن «الظهور فوق التطبيقات» من إعدادات النظام.</string>
+    <string name="overlay_open_settings">فتح الإعدادات</string>
+    <string name="overlay_notif">Mimo تعمل فوق التطبيقات</string>
+    <string name="overlay_notif_channel">الشخصية العائمة</string>
+    <string name="overlay_notif_hide">إخفاء</string>
+
+    <string name="mine_empty">لم تفتح أي شكل بعد. جرّب المتجر.</string>
+    <string name="mine_default">الشكل الافتراضي</string>
+
+    <string name="buy_points_title">شراء نقاط</string>
+    <string name="buy_points_unavailable">الشراء الحقيقي غير مفعّل بعد: يحتاج إلى إعداد حساب Google Play والمنتجات. يمكنك كسب النقاط مجانًا.</string>
+
+    <string name="rarity_common">شائع</string>
+    <string name="rarity_uncommon">غير شائع</string>
+    <string name="rarity_rare">نادر</string>
+    <string name="rarity_epic">ملحمي</string>
+    <string name="rarity_legendary">أسطوري</string>
+</resources>
