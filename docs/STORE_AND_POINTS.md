@@ -49,4 +49,11 @@ currency; for real-money points use server-side verification.
 * `tools/run_domain_tests.sh` compiles the pure-Kotlin domain layer and runs 30 JUnit tests (works offline).
 * The Android layer (Room, Compose UI, overlay service, Start.io adapter) has **not been compiled** in the authoring environment
   (no Android SDK / Maven access). CI (`.github/workflows/build.yml`) builds it; expect to fix small compile errors on the first run.
-* Not implemented in this pass: in-app language switch, prayer times, location, usage stats, activity, habits, voice/TTS, AI layer.
+* Voice & dialogue (added later): `domain/dialogue/*` (pure logic, 15 tests: quiet hours, modes, rate limits, no repeats, calls/focus),
+  `speech/SpeechController.kt` (Android TextToSpeech; reports a missing voice instead of failing), `ui/SettingsScreen.kt`.
+  The talking mouth is an APPROXIMATE pulse while the voice is active, not lip-sync. Call detection uses AudioManager mode only (best effort).
+* Habits & reminders (added later): `domain/reminders/*` (pure logic, 17 tests: daily/weekly/once, done-today skip, snooze, time zones),
+  Room v2 (`MIGRATION_1_2` adds the tables; points/ownership untouched), `reminders/*` (one AlarmManager alarm for the earliest reminder via
+  `setAndAllowWhileIdle`, notification with Done/Snooze, re-armed after reboot / app update / time change), tab "Habits".
+  Alerts can be a few minutes late in Doze / battery saver (exact alarms were intentionally not requested). The Room migration was not run on a device.
+* Not implemented yet: in-app language switch, prayer times, location, usage stats, activity, microphone/voice input, AI layer, Context Engine.

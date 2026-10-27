@@ -29,11 +29,20 @@ import kotlin.random.Random
  * It is skipped when the user turned system animations off.
  */
 @Composable
-fun MimoFace(skinId: String, modifier: Modifier = Modifier, blink: Boolean = true) {
+fun MimoFace(skinId: String, modifier: Modifier = Modifier, blink: Boolean = true, talking: Boolean = false) {
     val context = LocalContext.current
     val image: ImageBitmap = ImageBitmap.imageResource(SkinArt.resFor(skinId))
     val blinkSpec = remember(skinId) { SkinArt.blinkFor(skinId) }
     val eyeOpen = remember(skinId) { Animatable(1f) }
+    val talk = remember { Animatable(0f) }
+
+    // Approximate talking: the lower band (mouth) pulses at irregular rhythm while the voice is active.
+    // It is NOT lip-sync - it only tells the user "I'm speaking".
+    LaunchedEffect(talking, skinId) {
+        if (talking && blinkSpec != null) {
+            while (true) talk.animateTo(Random.nextFloat(), tween(Random.nextInt(90, 170)))
+        } else talk.animateTo(0f, tween(120))
+    }
 
     LaunchedEffect(skinId, blink) {
         if (!blink || blinkSpec == null) return@LaunchedEffect
@@ -53,12 +62,16 @@ fun MimoFace(skinId: String, modifier: Modifier = Modifier, blink: Boolean = tru
     Canvas(modifier.aspectRatio(1f)) {
         val dst = IntSize(size.width.toInt(), size.height.toInt())
         val open = eyeOpen.value
-        if (blinkSpec == null || open >= 0.999f) {
+        val mouthScale = 1f + 0.07f * talk.value
+        if (blinkSpec == null || (open >= 0.999f && talk.value < 0.001f)) {
             drawImage(image, dstSize = dst)
         } else {
             val (pivot, split) = blinkSpec
             val splitPx = split * size.height
-            clipRect(0f, splitPx, size.width, size.height) { drawImage(image, dstSize = dst) }          // mouth
+            // mouth: stretched downward from the split line, clipped to the lower band (after scaling)
+            scale(1f, mouthScale, pivot = Offset(size.width / 2f, splitPx)) {
+                clipRect(0f, splitPx, size.width, size.height) { drawImage(image, dstSize = dst) }
+            }
             clipRect(0f, 0f, size.width, splitPx) {                                                       // eyes
                 scale(1f, open, pivot = Offset(size.width / 2f, pivot * size.height)) { drawImage(image, dstSize = dst) }
             }

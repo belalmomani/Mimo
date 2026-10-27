@@ -10,6 +10,7 @@ class MimoApp : Application() {
         thread(name = "mimo-boot") {
             Graph.points.grantWelcomeBonus(Graph.rewardConfig.welcomeBonusPoints) // no-op after the first run
             Graph.loadActiveSkin()
+            com.mimo.companion.reminders.ReminderAlarm.reschedule(this)
         }
     }
 }

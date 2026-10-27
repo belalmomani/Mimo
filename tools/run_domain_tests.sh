@@ -8,6 +8,6 @@ KC_CP="$GL/kotlin-compiler-embeddable-2.0.21.jar:$GL/kotlin-stdlib-2.0.21.jar:$G
 TEST_CP="$GL/junit-4.13.2.jar:$GL/hamcrest-core-1.3.jar:$GL/kotlin-stdlib-2.0.21.jar"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 java -cp "$KC_CP" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -jvm-target 17 \
-  -cp "$TEST_CP" -d "$OUT" "$ROOT"/app/src/main/java/com/mimo/companion/domain/*.kt "$ROOT"/app/src/test/java/com/mimo/companion/*.kt
+  -cp "$TEST_CP" -d "$OUT" $(find "$ROOT/app/src/main/java/com/mimo/companion/domain" "$ROOT/app/src/test/java/com/mimo/companion" -name "*.kt")
 CLASSES=$(cd "$OUT" && find . -name '*Test.class' | sed 's#^\./##; s#\.class$##; s#/#.#g')
 java -cp "$OUT:$TEST_CP" org.junit.runner.JUnitCore $CLASSES

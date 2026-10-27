@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -45,6 +47,8 @@ fun MimoRoot(activity: Activity) {
                     Triple(R_home, Icons.Filled.Home, 0),
                     Triple(R_store, Icons.Filled.ShoppingCart, 1),
                     Triple(R_mine, Icons.Filled.Face, 2),
+                    Triple(R_habits, Icons.Filled.Notifications, 4),
+                    Triple(R_settings, Icons.Filled.Settings, 3),
                 )
                 items.forEach { (label, icon, idx) ->
                     NavigationBarItem(selected = tab == idx, onClick = { tab = idx },
@@ -57,7 +61,9 @@ fun MimoRoot(activity: Activity) {
         when (tab) {
             0 -> HomeScreen(state, m)
             1 -> StoreScreen(state, vm, activity, m)
-            else -> MineScreen(state, vm, m)
+            2 -> MineScreen(state, vm, m)
+            4 -> RemindersScreen(m)
+            else -> SettingsScreen(m)
         }
     }
 }
@@ -65,3 +71,5 @@ fun MimoRoot(activity: Activity) {
 private val R_home = com.mimo.companion.R.string.tab_home
 private val R_store = com.mimo.companion.R.string.tab_store
 private val R_mine = com.mimo.companion.R.string.tab_mine
+private val R_settings = com.mimo.companion.R.string.tab_settings
+private val R_habits = com.mimo.companion.R.string.tab_habits

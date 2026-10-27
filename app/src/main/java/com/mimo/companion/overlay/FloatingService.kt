@@ -32,6 +32,18 @@ import com.mimo.companion.Graph
 import com.mimo.companion.MainActivity
 import com.mimo.companion.R
 import com.mimo.companion.face.MimoFace
+import com.mimo.companion.domain.dialogue.PhraseCategory
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -42,7 +54,7 @@ import kotlin.math.abs
  * Runs as a foreground service (specialUse) so Android keeps it alive; it stops itself if the
  * permission is revoked, and is NOT restarted after a reboot (the user starts it from the app).
  *
- * Touch: drag moves it (position is saved), a short tap opens Mimo. The notification has a "Hide" action.
+ * Touch: drag moves it (position is saved), a short tap makes it answer, a long press opens Mimo. The notification has a "Hide" action.
  */
 class FloatingService : LifecycleService(), SavedStateRegistryOwner {
     private val savedStateController = SavedStateRegistryController.create(this)
@@ -87,10 +99,8 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
     }
 
     private fun attachOverlay() {
-        val density = resources.displayMetrics.density
-        val sizePx = (prefs.sizeDp * density).toInt()
         params = WindowManager.LayoutParams(
-            sizePx, sizePx,
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // NOT_FOCUSABLE: never steals keyboard focus; NOT_TOUCH_MODAL: touches outside pass through to the app below.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -103,22 +113,30 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
             setContent {
                 val skin by Graph.activeSkin.collectAsState()
-                MimoFace(skinId = skin)
+                val speaking by Graph.speech.speaking.collectAsState()
+                val bubble by Graph.bubble.collectAsState()
+                Column(horizontalAlignment = Alignment.Start) {
+                    MimoFace(skinId = skin, modifier = Modifier.size(prefs.sizeDp.dp), talking = speaking)
+                    // The bubble sits BELOW the face so the face never jumps when text appears.
+                    bubble?.let { Surface(shape = RoundedCornerShape(14.dp), tonalElevation = 3.dp, shadowElevation = 2.dp, modifier = Modifier.widthIn(max = 220.dp)) {
+                        Text(it, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), style = MaterialTheme.typography.bodyMedium)
+                    } }
+                }
             }
             setOnTouchListener(dragListener())
         }
         view = cv
         wm.addView(cv, params)
         // make sure the active look is current even if the app process was just (re)created
-        lifecycleScope.launch(Dispatchers.IO) { Graph.loadActiveSkin() }
+        lifecycleScope.launch(Dispatchers.IO) { Graph.loadActiveSkin(); Graph.maybeSpeak(PhraseCategory.GREETING) }
     }
 
     private fun dragListener() = object : View.OnTouchListener {
-        private var startX = 0; private var startY = 0; private var touchX = 0f; private var touchY = 0f; private var moved = false
+        private var startX = 0; private var startY = 0; private var touchX = 0f; private var touchY = 0f; private var moved = false; private var downAt = 0L
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             val slop = ViewConfiguration.get(this@FloatingService).scaledTouchSlop
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { startX = params.x; startY = params.y; touchX = e.rawX; touchY = e.rawY; moved = false }
+                MotionEvent.ACTION_DOWN -> { startX = params.x; startY = params.y; touchX = e.rawX; touchY = e.rawY; moved = false; downAt = e.eventTime }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - touchX; val dy = e.rawY - touchY
                     if (moved || abs(dx) > slop || abs(dy) > slop) {
@@ -129,7 +147,9 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
                 }
                 MotionEvent.ACTION_UP -> {
                     if (moved) { prefs.x = params.x; prefs.y = params.y }
-                    else startActivity(Intent(this@FloatingService, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    else if (e.eventTime - downAt >= ViewConfiguration.getLongPressTimeout()) {
+                        startActivity(Intent(this@FloatingService, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) // long press: open the app
+                    } else lifecycleScope.launch(Dispatchers.Default) { Graph.onTapped() }                                            // short tap: answer
                 }
             }
             return true
