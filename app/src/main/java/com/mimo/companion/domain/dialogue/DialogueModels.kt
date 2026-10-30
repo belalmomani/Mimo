@@ -20,6 +20,8 @@ enum class PhraseCategory {
     ENCOURAGE,
     /** Reply after the user marked something as done. */
     ACK_DONE,
+    /** Reply after the user logged a prayer. */
+    PRAYER_ACK,
 }
 
 data class Phrase(

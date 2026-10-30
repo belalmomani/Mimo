@@ -6,6 +6,7 @@ import com.mimo.companion.domain.dialogue.PhraseCategory.BREAK_SUGGESTION
 import com.mimo.companion.domain.dialogue.PhraseCategory.ENCOURAGE
 import com.mimo.companion.domain.dialogue.PhraseCategory.GREETING
 import com.mimo.companion.domain.dialogue.PhraseCategory.IDLE_CHAT
+import com.mimo.companion.domain.dialogue.PhraseCategory.PRAYER_ACK
 import com.mimo.companion.domain.dialogue.PhraseCategory.TAP_REPLY
 
 /**
@@ -47,6 +48,8 @@ object PhraseBank {
 
         p("ak1", ACK_DONE, "تمام، سجّلتها.", "Done, noted."),
         p("ak2", ACK_DONE, "ممتاز، سجّلت ذلك.", "Great, I've logged it."),
+        p("pa1", PRAYER_ACK, "الله يتقبل منك.", "May it be accepted."),
+        p("pa2", PRAYER_ACK, "تقبّل الله طاعتك.", "May Allah accept it from you."),
         p("ak3", ACK_DONE, "الله يعطيك العافية.", "Well done.", JORDANIAN),
     )
 

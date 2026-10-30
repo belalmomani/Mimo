@@ -50,7 +50,7 @@ class DialogueManager(
         val s = settings()
         val allowed = when (s.mode) {
             InitiativeMode.QUIET -> false
-            InitiativeMode.SOCIAL -> category != PhraseCategory.TAP_REPLY && category != PhraseCategory.ACK_DONE
+            InitiativeMode.SOCIAL -> category != PhraseCategory.TAP_REPLY && category != PhraseCategory.ACK_DONE && category != PhraseCategory.PRAYER_ACK
             InitiativeMode.CUSTOM -> category in s.allowedProactive
         }
         if (!allowed) return DialogueDecision.Silent(SpeakBlock.NOT_ALLOWED_BY_MODE)

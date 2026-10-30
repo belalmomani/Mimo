@@ -62,7 +62,7 @@ fun MimoRoot(activity: Activity) {
             0 -> HomeScreen(state, m)
             1 -> StoreScreen(state, vm, activity, m)
             2 -> MineScreen(state, vm, m)
-            4 -> RemindersScreen(m)
+            4 -> HabitsRoot(m)
             else -> SettingsScreen(m)
         }
     }

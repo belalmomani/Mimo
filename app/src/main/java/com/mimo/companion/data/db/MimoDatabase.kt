@@ -8,13 +8,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [WalletEntity::class, TransactionEntity::class, OwnedSkinEntity::class, AdProgressEntity::class, RewardEventEntity::class, KvEntity::class, ReminderEntity::class, ReminderDoneEntity::class],
-    version = 2,
+    entities = [WalletEntity::class, TransactionEntity::class, OwnedSkinEntity::class, AdProgressEntity::class, RewardEventEntity::class, KvEntity::class, ReminderEntity::class, ReminderDoneEntity::class, PrayerDoneEntity::class, PrayerStateEntity::class],
+    version = 3,
     exportSchema = true,
 )
 abstract class MimoDatabase : RoomDatabase() {
     abstract fun ledgerDao(): LedgerDao
     abstract fun reminderDao(): ReminderDao
+    abstract fun prayerDao(): PrayerDao
 
     companion object {
         /**
@@ -23,8 +24,16 @@ abstract class MimoDatabase : RoomDatabase() {
          */
         fun build(context: Context): MimoDatabase =
             Room.databaseBuilder(context.applicationContext, MimoDatabase::class.java, "mimo.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
+
+        /** v2 -> v3: adds the prayer log / reminder-state tables. Everything else is untouched. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `prayer_done` (`dayKey` TEXT NOT NULL, `prayer` TEXT NOT NULL, PRIMARY KEY(`dayKey`, `prayer`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `prayer_state` (`dayKey` TEXT NOT NULL, `prayer` TEXT NOT NULL, `sentCount` INTEGER NOT NULL, `nextAt` INTEGER, PRIMARY KEY(`dayKey`, `prayer`))")
+            }
+        }
 
         /** v1 -> v2: adds the reminders tables. Existing points / ownership tables are untouched. */
         val MIGRATION_1_2 = object : Migration(1, 2) {

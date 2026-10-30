@@ -121,4 +121,44 @@
     <string name="tpl_plants">Water plants</string>
     <string name="tpl_pets">Care for pets</string>
     <string name="tpl_medication">Medication appointment</string>
+    <string name="sub_habits">Reminders</string>
+    <string name="sub_prayer">Prayer</string>
+    <string name="prayer_enable">Prayer reminders</string>
+    <string name="prayer_city">City: %1$s</string>
+    <string name="prayer_method">Method: %1$s</string>
+    <string name="prayer_asr_method">Asr calculation</string>
+    <string name="asr_standard">Standard (shadow = 1x)</string>
+    <string name="asr_hanafi">Hanafi (shadow = 2x)</string>
+    <string name="prayer_today">Today\'s times %1$s</string>
+    <string name="prayer_unavailable">N/A</string>
+    <string name="prayer_logged">✓ Prayed</string>
+    <string name="prayer_prayed">I prayed</string>
+    <string name="prayer_tune">Fine-tune minutes (to match your local timetable)</string>
+    <string name="prayer_reminders">Reminder settings</string>
+    <string name="prayer_before">Remind %1$d min before the time</string>
+    <string name="prayer_count">Reminders per prayer: %1$d</string>
+    <string name="prayer_gap">Gap between reminders and snooze: %1$d min</string>
+    <string name="prayer_message">Custom wording (optional)</string>
+    <string name="prayer_silence_note">Not pressing I prayed is not treated as confirmation; reminders simply stop after the chosen count.</string>
+    <string name="prayer_disclaimer">Times are calculated on your device with the chosen method and can differ by a few minutes from your country\'s official timetable. Adjust the minutes to match it. Where a time cannot be calculated (high latitudes) it shows N/A and is never guessed.</string>
+    <string name="prayer_privacy">Prayer data stays on your device only. It is never sent anywhere or used for ads.</string>
+    <string name="prayer_delete_log">Delete prayer log</string>
+    <string name="prayer_delete_confirm">This deletes the logged prayers and pending follow-ups. Settings are kept.</string>
+    <string name="prayer_pick_city">Choose city</string>
+    <string name="prayer_pick_method">Choose method</string>
+    <string name="method_mwl">Muslim World League</string>
+    <string name="method_egyptian">Egyptian General Authority</string>
+    <string name="method_karachi">Univ. of Islamic Sciences, Karachi</string>
+    <string name="method_umm_al_qura">Umm al-Qura</string>
+    <string name="method_isna">North America (ISNA)</string>
+    <string name="prayer_fajr">Fajr</string>
+    <string name="prayer_sunrise">Sunrise</string>
+    <string name="prayer_dhuhr">Dhuhr</string>
+    <string name="prayer_asr">Asr</string>
+    <string name="prayer_maghrib">Maghrib</string>
+    <string name="prayer_isha">Isha</string>
+    <string name="prayer_soon">%1$s is approaching</string>
+    <string name="prayer_now">It is time for %1$s</string>
+    <string name="prayer_channel">Prayer</string>
+    <string name="prayer_snooze">Snooze %1$d min</string>
 </resources>

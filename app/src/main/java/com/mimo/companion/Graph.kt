@@ -19,6 +19,9 @@ import com.mimo.companion.domain.dialogue.DialogueDecision
 import com.mimo.companion.domain.dialogue.DialogueManager
 import com.mimo.companion.domain.dialogue.PhraseCategory
 import com.mimo.companion.settings.SettingsStore
+import com.mimo.companion.settings.PrayerSettingsStore
+import com.mimo.companion.data.db.RoomPrayerStorage
+import com.mimo.companion.domain.prayer.PrayerService
 import com.mimo.companion.data.db.RoomReminderStorage
 import com.mimo.companion.domain.reminders.ReminderManager
 import com.mimo.companion.speech.SpeechController
@@ -43,9 +46,12 @@ object Graph {
 
     lateinit var settings: SettingsStore; private set
     lateinit var reminders: ReminderManager; private set
+    lateinit var prayer: PrayerService; private set
+    lateinit var prayerSettings: PrayerSettingsStore; private set
     lateinit var speech: SpeechController; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
+    fun appCtx(): Context = appContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var bubbleJob: Job? = null
 
@@ -68,6 +74,8 @@ object Graph {
         val db = MimoDatabase.build(context)
         storage = RoomLedgerStorage(db)
         reminders = ReminderManager(RoomReminderStorage(db))
+        prayer = PrayerService(RoomPrayerStorage(db))
+        prayerSettings = PrayerSettingsStore(context)
         points = PointsManager(storage)
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
@@ -93,6 +101,9 @@ object Graph {
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
     fun onReminderDone() { if (com.mimo.companion.overlay.FloatingService.running) present(dialogue.reply(PhraseCategory.ACK_DONE)) }
+
+    /** The user logged a prayer: short acknowledgement when the companion is visible. */
+    fun onPrayerLogged() { if (com.mimo.companion.overlay.FloatingService.running) present(dialogue.reply(PhraseCategory.PRAYER_ACK)) }
 
     /** Text the user asked for (a reminder they set). Not filtered by initiative mode; callers decide about quiet hours. */
     fun announce(text: String, speak: Boolean, show: Boolean) {

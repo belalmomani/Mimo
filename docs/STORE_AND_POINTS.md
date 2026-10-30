@@ -56,4 +56,5 @@ currency; for real-money points use server-side verification.
   Room v2 (`MIGRATION_1_2` adds the tables; points/ownership untouched), `reminders/*` (one AlarmManager alarm for the earliest reminder via
   `setAndAllowWhileIdle`, notification with Done/Snooze, re-armed after reboot / app update / time change), tab "Habits".
   Alerts can be a few minutes late in Doze / battery saver (exact alarms were intentionally not requested). The Room migration was not run on a device.
-* Not implemented yet: in-app language switch, prayer times, location, usage stats, activity, microphone/voice input, AI layer, Context Engine.
+* Prayer times (Habits tab > Prayer): computed on the device from a built-in city list (no GPS), methods MWL/Egyptian/Karachi/Umm al-Qura/ISNA, Asr standard or Hanafi, per-prayer minute adjustment. Times may differ by minutes from an official timetable; uncomputable times show N/A and are never guessed. Reminders use one inexact alarm (may be delayed in Doze). Pressing "I prayed" is optional; silence is never treated as confirmation. Data stays local and can be deleted.
+* Not implemented yet: in-app language switch, location auto-detect, usage stats, activity, microphone/voice input, AI layer, Context Engine.

@@ -57,7 +57,7 @@ fun RemindersScreen(modifier: Modifier = Modifier, vm: RemindersViewModel = view
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var creating by remember { mutableStateOf<String?>(null) } // template name or "" for blank
 
-    Column(modifier.fillMaxSize().statusBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.reminders_title), style = MaterialTheme.typography.headlineMedium)
         Button(onClick = { creating = "" }) { Text(stringResource(R.string.reminder_add)) }
         TemplateChips { creating = it }
