@@ -169,4 +169,19 @@
     <string name="prayer_now">حان وقت %1$s</string>
     <string name="prayer_channel">الصلاة</string>
     <string name="prayer_snooze">تأجيل %1$d د</string>
+    <string name="myvoice_title">صوتي الخاص</string>
+    <string name="myvoice_hint">أضف ملفات صوتية بصوتك (حتى %1$d ملفات، كل ملف حتى %2$d ثانية و%3$d ميغابايت). تُحفظ على جهازك فقط.</string>
+    <string name="myvoice_tts_only">الصوت المدمج فقط (الافتراضي)</string>
+    <string name="myvoice_clips_only">ملفاتي فقط (يرجع للصوت المدمج إن لم توجد ملفات)</string>
+    <string name="myvoice_both">ملف صوتي ثم الصوت المدمج يقرأ النص</string>
+    <string name="myvoice_keep_note">إضافة ملفاتك لا تحذف الصوت المدمج ولا تغيّره؛ اختيارك أعلاه هو ما يحدد ما يُشغَّل، ويمكنك الرجوع في أي وقت. الملف لا يستطيع نطق نص جديد، لذلك يظهر النص في الفقاعة.</string>
+    <string name="myvoice_add">إضافة ملف صوتي</string>
+    <string name="myvoice_play">تشغيل</string>
+    <string name="myvoice_delete">حذف</string>
+    <string name="myvoice_added">تمت إضافة الملف.</string>
+    <string name="myvoice_too_many">وصلت للحد الأقصى من الملفات.</string>
+    <string name="myvoice_too_big">الملف أكبر من الحد المسموح.</string>
+    <string name="myvoice_too_long">الملف أطول من الحد المسموح.</string>
+    <string name="myvoice_not_audio">هذا الملف ليس ملفًا صوتيًا صالحًا.</string>
+    <string name="myvoice_failed">تعذّرت إضافة الملف.</string>
 </resources>

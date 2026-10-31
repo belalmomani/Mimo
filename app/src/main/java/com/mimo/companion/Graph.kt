@@ -48,6 +48,7 @@ object Graph {
     lateinit var reminders: ReminderManager; private set
     lateinit var prayer: PrayerService; private set
     lateinit var prayerSettings: PrayerSettingsStore; private set
+    lateinit var customVoices: com.mimo.companion.speech.CustomVoiceStore; private set
     lateinit var speech: SpeechController; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
@@ -76,6 +77,7 @@ object Graph {
         reminders = ReminderManager(RoomReminderStorage(db))
         prayer = PrayerService(RoomPrayerStorage(db))
         prayerSettings = PrayerSettingsStore(context)
+        customVoices = com.mimo.companion.speech.CustomVoiceStore(context)
         points = PointsManager(storage)
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
@@ -108,7 +110,7 @@ object Graph {
     /** Text the user asked for (a reminder they set). Not filtered by initiative mode; callers decide about quiet hours. */
     fun announce(text: String, speak: Boolean, show: Boolean) {
         val s = settings.value
-        val spoke = speak && s.voiceEnabled && speech.speak(text, s.dialogue.lang, s.speechRate)
+        val spoke = speak && s.voiceEnabled && voice(text, s)
         if (show && s.showText) _bubble.value = text
         bubbleJob?.cancel()
         bubbleJob = scope.launch {
@@ -120,10 +122,21 @@ object Graph {
     /** Voice-test button in settings. */
     fun testVoice() = present(dialogue.reply())
 
+    /** Voice output according to the chosen source. The built-in voice is always the fallback; clips only add to it. */
+    private fun voice(text: String, s: com.mimo.companion.domain.dialogue.CompanionSettings): Boolean {
+        val tts = { speech.speak(text, s.dialogue.lang, s.speechRate) }
+        val clip = if (s.voiceSource == com.mimo.companion.domain.dialogue.VoiceSource.TTS_ONLY) null else customVoices.pick()
+        return when {
+            clip == null -> tts()
+            s.voiceSource == com.mimo.companion.domain.dialogue.VoiceSource.CLIPS_ONLY -> speech.playClip(clip.file, null, tts)
+            else -> speech.playClip(clip.file, tts, tts)
+        }
+    }
+
     private fun present(d: DialogueDecision) {
         if (d !is DialogueDecision.Say) return
         val s = settings.value
-        val spoke = s.voiceEnabled && speech.speak(d.text, s.dialogue.lang, s.speechRate)
+        val spoke = s.voiceEnabled && voice(d.text, s)
         if (s.showText) _bubble.value = d.text
         bubbleJob?.cancel()
         bubbleJob = scope.launch {

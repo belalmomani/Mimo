@@ -6,6 +6,7 @@ import com.mimo.companion.domain.dialogue.Dialect
 import com.mimo.companion.domain.dialogue.DialogueSettings
 import com.mimo.companion.domain.dialogue.InitiativeMode
 import com.mimo.companion.domain.dialogue.Lang
+import com.mimo.companion.domain.dialogue.VoiceSource
 import com.mimo.companion.domain.dialogue.PhraseCategory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ class SettingsStore(context: Context) {
                 voiceEnabled = p.getBoolean("voice", true),
                 showText = p.getBoolean("showText", true),
                 speechRate = p.getFloat("rate", 1f).coerceIn(0.5f, 1.5f),
+                voiceSource = enumOr(p.getString("voiceSource", null), VoiceSource.TTS_ONLY),
                 dialogue = DialogueSettings(
                     mode = enumOr(p.getString("mode", null), InitiativeMode.QUIET),
                     allowedProactive = p.getStringSet("allowed", emptySet())!!.mapNotNull { n -> PhraseCategory.values().firstOrNull { it.name == n } }.toSet(),
@@ -45,7 +47,7 @@ class SettingsStore(context: Context) {
 
     private fun save(s: CompanionSettings) {
         p.edit()
-            .putBoolean("voice", s.voiceEnabled).putBoolean("showText", s.showText).putFloat("rate", s.speechRate)
+            .putBoolean("voice", s.voiceEnabled).putBoolean("showText", s.showText).putFloat("rate", s.speechRate).putString("voiceSource", s.voiceSource.name)
             .putString("mode", s.dialogue.mode.name).putStringSet("allowed", s.dialogue.allowedProactive.map { it.name }.toSet())
             .putString("dialect", s.dialogue.dialect.name).putString("lang", s.dialogue.lang.name)
             .putInt("qs", s.dialogue.quietStartMin).putInt("qe", s.dialogue.quietEndMin)

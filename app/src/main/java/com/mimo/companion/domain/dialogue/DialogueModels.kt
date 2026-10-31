@@ -68,6 +68,7 @@ data class CompanionSettings(
     /** TextToSpeech rate, 0.5 .. 1.5 (1.0 = normal). */
     val speechRate: Float = 1.0f,
     val dialogue: DialogueSettings = DialogueSettings(),
+    val voiceSource: VoiceSource = VoiceSource.TTS_ONLY,
 ) {
     init { require(speechRate in 0.5f..1.5f) }
 }

@@ -161,4 +161,19 @@
     <string name="prayer_now">It is time for %1$s</string>
     <string name="prayer_channel">Prayer</string>
     <string name="prayer_snooze">Snooze %1$d min</string>
+    <string name="myvoice_title">My own voice</string>
+    <string name="myvoice_hint">Add audio clips in your own voice (up to %1$d clips, each up to %2$d seconds and %3$d MB). They stay on your device only.</string>
+    <string name="myvoice_tts_only">Built-in voice only (default)</string>
+    <string name="myvoice_clips_only">My clips only (falls back to the built-in voice if there are none)</string>
+    <string name="myvoice_both">A clip, then the built-in voice reads the text</string>
+    <string name="myvoice_keep_note">Adding your clips does not delete or change the built-in voice; the choice above decides what plays, and you can switch back any time. A clip cannot speak new text, so the text still shows in the bubble.</string>
+    <string name="myvoice_add">Add audio clip</string>
+    <string name="myvoice_play">Play</string>
+    <string name="myvoice_delete">Delete</string>
+    <string name="myvoice_added">Clip added.</string>
+    <string name="myvoice_too_many">You reached the maximum number of clips.</string>
+    <string name="myvoice_too_big">The file is larger than allowed.</string>
+    <string name="myvoice_too_long">The clip is longer than allowed.</string>
+    <string name="myvoice_not_audio">This is not a valid audio file.</string>
+    <string name="myvoice_failed">Could not add the clip.</string>
 </resources>

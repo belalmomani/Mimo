@@ -4,12 +4,14 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.mimo.companion.domain.dialogue.Lang
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 import java.util.Locale
 import java.util.UUID
 
@@ -72,7 +74,35 @@ class SpeechController(context: Context) {
         return true
     }
 
-    fun stop() { tts?.stop(); finished() }
+    private var player: MediaPlayer? = null
+
+    /**
+     * Plays one of the user's clips. [then] runs after it finishes (e.g. speak the text with the built-in voice)
+     * and returns whether it started speaking; [onFail] runs instead when the clip cannot be played.
+     * [speaking] stays true across the hand-over so the bubble does not vanish between the two.
+     * @return false when the clip could not even be set up (nothing played, [onFail] was not called).
+     */
+    fun playClip(file: File, then: (() -> Boolean)?, onFail: () -> Boolean): Boolean {
+        releasePlayer()
+        return try {
+            requestFocus()
+            val mp = MediaPlayer()
+            player = mp
+            mp.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+            mp.setDataSource(file.absolutePath)
+            mp.setOnPreparedListener { _speaking.value = true; it.start() }
+            mp.setOnCompletionListener { if (player === it) { releasePlayer(); if (then == null || !then()) finished() } }
+            mp.setOnErrorListener { m, _, _ -> if (player === m) { releasePlayer(); if (!onFail()) finished() }; true }
+            mp.prepareAsync()
+            true
+        } catch (e: Exception) {
+            releasePlayer(); finished(); false
+        }
+    }
+
+    private fun releasePlayer() { player?.let { try { it.release() } catch (_: Exception) {} }; player = null }
+
+    fun stop() { releasePlayer(); tts?.stop(); finished() }
 
     fun shutdown() { stop(); tts?.shutdown(); tts = null; _status.value = VoiceStatus.INITIALIZING }
 
