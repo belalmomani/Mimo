@@ -181,4 +181,14 @@
     <string name="prayer_detect_found">%1$s selected</string>
     <string name="prayer_detect_no_perm">Location permission not granted</string>
     <string name="prayer_detect_fail">Could not get location</string>
+    <string name="sub_steps">Steps</string>
+    <string name="steps_title">Today\'s steps</string>
+    <string name="steps_label">steps</string>
+    <string name="steps_of_goal">of %1$s</string>
+    <string name="steps_goal_done">🎯 Goal reached!</string>
+    <string name="steps_goal_title">Daily goal</string>
+    <string name="steps_unavailable">This device does not have a step-counter sensor.</string>
+    <string name="steps_perm_rationale">Android 10 requires a permission to read step counts. Nothing is sent outside your device.</string>
+    <string name="steps_grant_perm">Grant permission</string>
+    <string name="steps_privacy">Step counts are calculated on your device only and never sent anywhere.</string>
 </resources>

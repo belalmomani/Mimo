@@ -189,4 +189,14 @@
     <string name="prayer_detect_found">تم اختيار %1$s</string>
     <string name="prayer_detect_no_perm">لم يُمنح إذن الموقع</string>
     <string name="prayer_detect_fail">تعذّر تحديد الموقع</string>
+    <string name="sub_steps">الخطوات</string>
+    <string name="steps_title">خطواتي اليوم</string>
+    <string name="steps_label">خطوة</string>
+    <string name="steps_of_goal">من %1$s</string>
+    <string name="steps_goal_done">🎯 أنجزت هدفك اليوم!</string>
+    <string name="steps_goal_title">الهدف اليومي</string>
+    <string name="steps_unavailable">جهازك لا يحتوي على حساس خطوات.</string>
+    <string name="steps_perm_rationale">يحتاج Android 10 إلى إذن لقراءة عدد الخطوات. لا شيء يُرسل خارج جهازك.</string>
+    <string name="steps_grant_perm">منح الإذن</string>
+    <string name="steps_privacy">عدد الخطوات يُحسب على جهازك فقط ولا يُرسل إلى أي جهة.</string>
 </resources>

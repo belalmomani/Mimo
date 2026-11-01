@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.mimo.companion.R
 
-/** The "Habits" tab hosts two independent sub-screens; each works even if the other is switched off. */
+/** The "Habits" tab hosts three independent sub-screens; each works even if the others are switched off. */
 @Composable
 fun HabitsRoot(modifier: Modifier = Modifier) {
     var sub by remember { mutableIntStateOf(0) }
@@ -22,7 +22,12 @@ fun HabitsRoot(modifier: Modifier = Modifier) {
         TabRow(selectedTabIndex = sub) {
             Tab(sub == 0, { sub = 0 }, text = { Text(stringResource(R.string.sub_habits)) })
             Tab(sub == 1, { sub = 1 }, text = { Text(stringResource(R.string.sub_prayer)) })
+            Tab(sub == 2, { sub = 2 }, text = { Text(stringResource(R.string.sub_steps)) })
         }
-        if (sub == 0) RemindersScreen() else PrayerScreen()
+        when (sub) {
+            0 -> RemindersScreen()
+            1 -> PrayerScreen()
+            else -> StepScreen()
+        }
     }
 }

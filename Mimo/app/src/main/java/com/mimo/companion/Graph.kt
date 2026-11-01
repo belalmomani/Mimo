@@ -50,6 +50,7 @@ object Graph {
     lateinit var prayerSettings: PrayerSettingsStore; private set
     lateinit var customVoices: com.mimo.companion.speech.CustomVoiceStore; private set
     lateinit var speech: SpeechController; private set
+    lateinit var steps: com.mimo.companion.steps.StepCounter; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -78,6 +79,7 @@ object Graph {
         prayer = PrayerService(RoomPrayerStorage(db))
         prayerSettings = PrayerSettingsStore(context)
         customVoices = com.mimo.companion.speech.CustomVoiceStore(context)
+        steps = com.mimo.companion.steps.StepCounter(context).also { it.start() }
         points = PointsManager(storage)
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
