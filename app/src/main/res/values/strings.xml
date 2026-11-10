@@ -184,4 +184,46 @@
     <string name="myvoice_too_long">الملف أطول من الحد المسموح.</string>
     <string name="myvoice_not_audio">هذا الملف ليس ملفًا صوتيًا صالحًا.</string>
     <string name="myvoice_failed">تعذّرت إضافة الملف.</string>
+    <string name="prayer_detect_city">تحديد تلقائي</string>
+    <string name="prayer_detect_loading">جاري تحديد موقعك…</string>
+    <string name="prayer_detect_found">تم اختيار %1$s</string>
+    <string name="prayer_detect_no_perm">لم يُمنح إذن الموقع</string>
+    <string name="prayer_detect_fail">تعذّر تحديد الموقع</string>
+    <string name="sub_steps">الخطوات</string>
+    <string name="steps_title">خطواتي اليوم</string>
+    <string name="steps_label">خطوة</string>
+    <string name="steps_of_goal">من %1$s</string>
+    <string name="steps_goal_done">🎯 أنجزت هدفك اليوم!</string>
+    <string name="steps_goal_title">الهدف اليومي</string>
+    <string name="steps_unavailable">جهازك لا يحتوي على حساس خطوات.</string>
+    <string name="steps_perm_rationale">يحتاج Android 10 إلى إذن لقراءة عدد الخطوات. لا شيء يُرسل خارج جهازك.</string>
+    <string name="steps_grant_perm">منح الإذن</string>
+    <string name="steps_privacy">عدد الخطوات يُحسب على جهازك فقط ولا يُرسل إلى أي جهة.</string>
+    <string name="voice_input_listening">أنا أسمعك…</string>
+    <string name="voice_input_no_match">لم أتعرف على الكلام، حاول مجدداً</string>
+    <string name="voice_input_no_perm">يحتاج التطبيق إذن الميكروفون</string>
+    <string name="voice_input_unavailable">التعرف على الصوت غير متاح على هذا الجهاز</string>
+    <string name="voice_input_error">خطأ في التعرف على الصوت</string>
+    <string name="voice_input_hint">قل اسم التذكير…</string>
+    <string name="voice_input_btn">تذكير صوتي</string>
+
+    <!-- Stats screen -->
+    <string name="tab_stats">إحصاءات</string>
+    <string name="stats_title">إحصاءاتي</string>
+    <string name="stats_steps_today">خطوات اليوم</string>
+    <string name="stats_week_title">آخر 7 أيام</string>
+    <string name="stats_reminders_done">تذكيرات مُنجزة</string>
+    <string name="stats_prayers_logged">صلوات مُسجَّلة</string>
+    <string name="stats_this_week">هذا الأسبوع</string>
+    <string name="stats_legend_reminders">تذكيرات</string>
+    <string name="stats_legend_prayers">صلوات</string>
+
+    <!-- Focus Mode -->
+    <string name="focus_title">وضع التركيز</string>
+    <string name="focus_desc_idle">أوقف رسائل الرفيق خلال جلسة العمل. يمكنك مسّه في أي وقت.</string>
+    <string name="focus_desc_active">الرفيق صامت. سيعود تلقائياً عند انتهاء الوقت.</string>
+    <string name="focus_active">نشط</string>
+    <string name="focus_remaining">%1$d د متبقية</string>
+    <string name="focus_start">ابدأ التركيز</string>
+    <string name="focus_stop">أنهِ التركيز</string>
 </resources>

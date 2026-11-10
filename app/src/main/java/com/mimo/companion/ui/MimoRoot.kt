@@ -3,6 +3,7 @@ package com.mimo.companion.ui
 import android.app.Activity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -45,9 +46,9 @@ fun MimoRoot(activity: Activity) {
             NavigationBar {
                 val items = listOf(
                     Triple(R_home, Icons.Filled.Home, 0),
-                    Triple(R_store, Icons.Filled.ShoppingCart, 1),
-                    Triple(R_mine, Icons.Filled.Face, 2),
                     Triple(R_habits, Icons.Filled.Notifications, 4),
+                    Triple(R_stats, Icons.Filled.BarChart, 5),
+                    Triple(R_mine, Icons.Filled.Face, 2),
                     Triple(R_settings, Icons.Filled.Settings, 3),
                 )
                 items.forEach { (label, icon, idx) ->
@@ -63,7 +64,8 @@ fun MimoRoot(activity: Activity) {
             1 -> StoreScreen(state, vm, activity, m)
             2 -> MineScreen(state, vm, m)
             4 -> HabitsRoot(m)
-            else -> SettingsScreen(m)
+            5 -> StatsScreen(m)
+            else -> SettingsScreen(m, activity)
         }
     }
 }
@@ -73,3 +75,4 @@ private val R_store = com.mimo.companion.R.string.tab_store
 private val R_mine = com.mimo.companion.R.string.tab_mine
 private val R_settings = com.mimo.companion.R.string.tab_settings
 private val R_habits = com.mimo.companion.R.string.tab_habits
+private val R_stats = com.mimo.companion.R.string.tab_stats

@@ -1,5 +1,8 @@
 package com.mimo.companion.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -27,8 +31,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mimo.companion.Graph
@@ -36,7 +42,9 @@ import com.mimo.companion.R
 import com.mimo.companion.domain.prayer.AsrMethod
 import com.mimo.companion.domain.prayer.CalcMethod
 import com.mimo.companion.domain.prayer.Cities
+import com.mimo.companion.domain.prayer.CityMatcher
 import com.mimo.companion.domain.prayer.Prayer
+import com.mimo.companion.prayer.LocationHelper
 import java.util.Locale
 
 private fun methodName(m: CalcMethod): Int = when (m) {
@@ -56,16 +64,75 @@ private fun prayerLabel(p: Prayer): Int = when (p) {
     Prayer.ISHA -> R.string.prayer_isha
 }
 
+/**
+ * Runs the location look-up off the main thread, then delivers a UI message.
+ * [onNeedPerm] is invoked (main thread) when the permission is missing so the
+ * Composable's launcher can request it — this function must NOT call the launcher itself.
+ */
+private fun runDetect(
+    ctx: android.content.Context,
+    vm: PrayerViewModel,
+    onNeedPerm: (() -> Unit)? = null,
+    onDone: (msg: String?, loading: Boolean) -> Unit,
+) {
+    LocationHelper.get(ctx) { result ->
+        when (result) {
+            is LocationHelper.Result.Ok -> {
+                val city = CityMatcher.nearest(result.lat, result.lng)
+                if (city != null) {
+                    vm.change { it.copy(cityId = city.id) }
+                    val name = if (java.util.Locale.getDefault().language == "ar") city.ar else city.en
+                    onDone(ctx.getString(R.string.prayer_detect_found, name), false)
+                } else {
+                    onDone(ctx.getString(R.string.prayer_detect_fail), false)
+                }
+            }
+            LocationHelper.Result.NoPermission -> {
+                onDone(null, true)   // keep spinner; permission launcher will handle it
+                onNeedPerm?.invoke() ?: onDone(ctx.getString(R.string.prayer_detect_no_perm), false)
+            }
+            LocationHelper.Result.Unavailable ->
+                onDone(ctx.getString(R.string.prayer_detect_fail), false)
+        }
+    }
+}
+
 /** Prayer times (computed on the device from the chosen city and method), optional reminders and a private log. */
 @Composable
 fun PrayerScreen(modifier: Modifier = Modifier, vm: PrayerViewModel = viewModel()) {
     val s by Graph.prayerSettings.flow.collectAsState()
     val ui by vm.state.collectAsState()
+    val ctx = LocalContext.current
     val ar = Locale.getDefault().language == "ar"
     var pickCity by remember { mutableStateOf(false) }
     var pickMethod by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val city = Cities.byId(s.cityId)
+
+    // Auto-detect state: null = idle, "" = loading, else = status message
+    var detectMsg by remember { mutableStateOf<String?>(null) }
+    var detecting by remember { mutableStateOf(false) }
+
+    // Permission launcher — asked once when the user taps "تحديد تلقائي"
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            detecting = false
+            detectMsg = ctx.getString(R.string.prayer_detect_no_perm)
+        } else {
+            // Permission just granted — try again
+            runDetect(ctx, vm) { msg, loading -> detectMsg = msg; detecting = loading }
+        }
+    }
+
+    fun onDetectTap() {
+        detecting = true
+        detectMsg = ctx.getString(R.string.prayer_detect_loading)
+        runDetect(ctx, vm,
+            onNeedPerm = { permLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION) },
+        ) { msg, loading -> detectMsg = msg; detecting = loading }
+    }
 
     Column(modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -75,7 +142,14 @@ fun PrayerScreen(modifier: Modifier = Modifier, vm: PrayerViewModel = viewModel(
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { pickCity = true }) { Text(stringResource(R.string.prayer_city, if (ar) city.ar else city.en)) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = { pickCity = true }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.prayer_city, if (ar) city.ar else city.en)) }
+                    OutlinedButton(onClick = { onDetectTap() }, enabled = !detecting) {
+                        if (detecting) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Text(stringResource(R.string.prayer_detect_city))
+                    }
+                }
+                detectMsg?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 OutlinedButton(onClick = { pickMethod = true }) { Text(stringResource(R.string.prayer_method, stringResource(methodName(s.method)))) }
                 Text(stringResource(R.string.prayer_asr_method), style = MaterialTheme.typography.labelLarge)
                 listOf(AsrMethod.STANDARD to R.string.asr_standard, AsrMethod.HANAFI to R.string.asr_hanafi).forEach { (m, label) ->

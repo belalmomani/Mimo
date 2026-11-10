@@ -1,11 +1,15 @@
 package com.mimo.companion.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,13 +18,18 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -37,14 +46,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mimo.companion.Graph
 import com.mimo.companion.R
 import com.mimo.companion.domain.reminders.Delivery
 import com.mimo.companion.domain.reminders.Reminder
 import com.mimo.companion.domain.reminders.RepeatType
+import com.mimo.companion.domain.voice.VoiceInputHelper
+import com.mimo.companion.domain.voice.VoiceInputResult
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -56,10 +70,75 @@ fun RemindersScreen(modifier: Modifier = Modifier, vm: RemindersViewModel = view
     val rows by vm.rows.collectAsState()
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var creating by remember { mutableStateOf<String?>(null) } // template name or "" for blank
+    var voiceListening by remember { mutableStateOf(false) }
+    var voiceStatus by remember { mutableStateOf<String?>(null) }
+    val ctx = LocalContext.current
+
+    // Permission launcher — called when RECORD_AUDIO is not yet granted
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            voiceListening = true
+            voiceStatus = ctx.getString(R.string.voice_input_listening)
+            Graph.voiceInput.start { result ->
+                voiceListening = false
+                when (result) {
+                    is VoiceInputResult.Ok -> {
+                        voiceStatus = null
+                        creating = VoiceInputHelper.clean(result.text)
+                    }
+                    VoiceInputResult.NoMatch -> voiceStatus = ctx.getString(R.string.voice_input_no_match)
+                    VoiceInputResult.NoPermission -> voiceStatus = ctx.getString(R.string.voice_input_no_perm)
+                    VoiceInputResult.Unavailable -> voiceStatus = ctx.getString(R.string.voice_input_unavailable)
+                    is VoiceInputResult.Error -> voiceStatus = ctx.getString(R.string.voice_input_error)
+                }
+            }
+        } else {
+            voiceStatus = ctx.getString(R.string.voice_input_no_perm)
+        }
+    }
+
+    fun startVoice() {
+        val hasPerm = ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (hasPerm) {
+            voiceListening = true
+            voiceStatus = ctx.getString(R.string.voice_input_listening)
+            Graph.voiceInput.start { result ->
+                voiceListening = false
+                when (result) {
+                    is VoiceInputResult.Ok -> {
+                        voiceStatus = null
+                        creating = VoiceInputHelper.clean(result.text)
+                    }
+                    VoiceInputResult.NoMatch -> voiceStatus = ctx.getString(R.string.voice_input_no_match)
+                    VoiceInputResult.NoPermission -> voiceStatus = ctx.getString(R.string.voice_input_no_perm)
+                    VoiceInputResult.Unavailable -> voiceStatus = ctx.getString(R.string.voice_input_unavailable)
+                    is VoiceInputResult.Error -> voiceStatus = ctx.getString(R.string.voice_input_error)
+                }
+            }
+        } else {
+            permLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
 
     Column(modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.reminders_title), style = MaterialTheme.typography.headlineMedium)
-        Button(onClick = { creating = "" }) { Text(stringResource(R.string.reminder_add)) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { creating = "" }) { Text(stringResource(R.string.reminder_add)) }
+            if (voiceListening) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            } else {
+                IconButton(onClick = { startVoice() }) {
+                    Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.voice_input_btn),
+                        tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+        voiceStatus?.let { msg ->
+            Text(msg, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         TemplateChips { creating = it }
         if (rows.isEmpty()) Text(stringResource(R.string.reminders_empty), style = MaterialTheme.typography.bodyMedium)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {

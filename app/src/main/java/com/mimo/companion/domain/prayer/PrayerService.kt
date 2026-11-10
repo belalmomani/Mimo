@@ -89,4 +89,10 @@ class PrayerService(private val storage: PrayerStorage, private val time: TimeSo
         val st = storage.state(dayKey, p)
         storage.saveState(dayKey, p, PrayerState(minOf(st.sentCount, s.reminderCount - 1).coerceAtLeast(1), nowMillis + s.gapMinutes * 60_000L))
     }
+
+    /**
+     * Number of prayers the user logged as done on a given day (0–5).
+     * Used by the stats screen; never guesses — returns only what is recorded.
+     */
+    fun loggedPrayers(dayKey: String): Int = storage.doneSet(dayKey).count { it.isPrayer }
 }

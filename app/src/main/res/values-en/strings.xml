@@ -176,4 +176,46 @@
     <string name="myvoice_too_long">The clip is longer than allowed.</string>
     <string name="myvoice_not_audio">This is not a valid audio file.</string>
     <string name="myvoice_failed">Could not add the clip.</string>
+    <string name="prayer_detect_city">Auto-detect</string>
+    <string name="prayer_detect_loading">Getting your location…</string>
+    <string name="prayer_detect_found">%1$s selected</string>
+    <string name="prayer_detect_no_perm">Location permission not granted</string>
+    <string name="prayer_detect_fail">Could not get location</string>
+    <string name="sub_steps">Steps</string>
+    <string name="steps_title">Today\'s steps</string>
+    <string name="steps_label">steps</string>
+    <string name="steps_of_goal">of %1$s</string>
+    <string name="steps_goal_done">🎯 Goal reached!</string>
+    <string name="steps_goal_title">Daily goal</string>
+    <string name="steps_unavailable">This device does not have a step-counter sensor.</string>
+    <string name="steps_perm_rationale">Android 10 requires a permission to read step counts. Nothing is sent outside your device.</string>
+    <string name="steps_grant_perm">Grant permission</string>
+    <string name="steps_privacy">Step counts are calculated on your device only and never sent anywhere.</string>
+    <string name="voice_input_listening">Listening…</string>
+    <string name="voice_input_no_match">Didn\'t catch that, try again</string>
+    <string name="voice_input_no_perm">Microphone permission is needed</string>
+    <string name="voice_input_unavailable">Speech recognition is not available on this device</string>
+    <string name="voice_input_error">Speech recognition error</string>
+    <string name="voice_input_hint">Say the reminder name…</string>
+    <string name="voice_input_btn">Voice reminder</string>
+
+    <!-- Stats screen -->
+    <string name="tab_stats">Stats</string>
+    <string name="stats_title">My Stats</string>
+    <string name="stats_steps_today">Steps today</string>
+    <string name="stats_week_title">Last 7 days</string>
+    <string name="stats_reminders_done">Reminders done</string>
+    <string name="stats_prayers_logged">Prayers logged</string>
+    <string name="stats_this_week">This week</string>
+    <string name="stats_legend_reminders">Reminders</string>
+    <string name="stats_legend_prayers">Prayers</string>
+
+    <!-- Focus Mode -->
+    <string name="focus_title">Focus Mode</string>
+    <string name="focus_desc_idle">Silence the companion during a work session. You can still tap it anytime.</string>
+    <string name="focus_desc_active">Companion is silent. It will return when the timer ends.</string>
+    <string name="focus_active">Active</string>
+    <string name="focus_remaining">%1$d min left</string>
+    <string name="focus_start">Start focus</string>
+    <string name="focus_stop">End focus</string>
 </resources>

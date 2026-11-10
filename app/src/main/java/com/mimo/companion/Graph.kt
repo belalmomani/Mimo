@@ -45,11 +45,16 @@ object Graph {
     var billing: BillingRepository = NotConfiguredBillingRepository; private set
 
     lateinit var settings: SettingsStore; private set
+    lateinit var onboarding: com.mimo.companion.onboarding.OnboardingStore; private set
     lateinit var reminders: ReminderManager; private set
     lateinit var prayer: PrayerService; private set
     lateinit var prayerSettings: PrayerSettingsStore; private set
     lateinit var customVoices: com.mimo.companion.speech.CustomVoiceStore; private set
     lateinit var speech: SpeechController; private set
+    lateinit var steps: com.mimo.companion.steps.StepCounter; private set
+    lateinit var voiceInput: com.mimo.companion.voice.VoiceInputLauncher; private set
+    lateinit var contextEngine: com.mimo.companion.context.ContextEngine; private set
+    lateinit var focus: com.mimo.companion.focus.FocusManager; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -70,6 +75,7 @@ object Graph {
     fun init(context: Context) {
         appContext = context.applicationContext
         settings = SettingsStore(context)
+        onboarding = com.mimo.companion.onboarding.OnboardingStore(context)
         speech = SpeechController(context).also { it.init() }
         dialogue = DialogueManager({ settings.value.dialogue })
         val db = MimoDatabase.build(context)
@@ -78,6 +84,15 @@ object Graph {
         prayer = PrayerService(RoomPrayerStorage(db))
         prayerSettings = PrayerSettingsStore(context)
         customVoices = com.mimo.companion.speech.CustomVoiceStore(context)
+        steps = com.mimo.companion.steps.StepCounter(context).also { it.start() }
+        voiceInput = com.mimo.companion.voice.VoiceInputLauncher(context)
+        focus = com.mimo.companion.focus.FocusManager()
+        contextEngine = com.mimo.companion.context.ContextEngine(
+            context = appContext,
+            stepCounter = steps,
+            prayerSettings = prayerSettings,
+            lang = { settings.value.dialogue.lang },
+        )
         points = PointsManager(storage)
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
@@ -95,11 +110,31 @@ object Graph {
         return DialogueContext(inCall = inCall)
     }
 
+    /** Full context snapshot for the Context Engine (call status + focus + step + prayer + screen). */
+    fun buildSnapshot(): com.mimo.companion.domain.context.ContextSnapshot {
+        val am = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val inCall = am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+        return contextEngine.snapshot().copy(inCall = inCall, focusSession = focus.isActive)
+    }
+
     /** The user tapped the companion. */
     fun onTapped() = present(dialogue.reply())
 
     /** The app wants to speak on its own (greeting, suggestions...). Silent unless mode/quiet hours/limits allow it. */
     fun maybeSpeak(category: PhraseCategory) = present(dialogue.proactive(category, currentContext()))
+
+    /**
+     * Let the Context Engine choose the best proactive category and speak it
+     * (if the DialogueManager allows it at this moment).
+     * Call this from the overlay service's idle timer instead of [maybeSpeak].
+     */
+    fun maybeSpeakFromContext() {
+        val snapshot = buildSnapshot()
+        val category = com.mimo.companion.domain.context.ContextAdvisor.bestCategory(snapshot)
+            ?: return // nothing relevant to say right now
+        val ctx = DialogueContext(inCall = snapshot.inCall, focusSession = snapshot.focusSession)
+        present(dialogue.proactive(category, ctx))
+    }
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
     fun onReminderDone() { if (com.mimo.companion.overlay.FloatingService.running) present(dialogue.reply(PhraseCategory.ACK_DONE)) }

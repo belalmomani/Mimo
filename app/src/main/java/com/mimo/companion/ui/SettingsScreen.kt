@@ -26,7 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import android.app.Activity
 import com.mimo.companion.Graph
+import com.mimo.companion.MainActivity
 import com.mimo.companion.R
 import com.mimo.companion.domain.dialogue.Dialect
 import com.mimo.companion.domain.dialogue.InitiativeMode
@@ -49,7 +51,7 @@ import java.util.Locale
 
 /** "شخصيتي وقواعدي" - first slice: voice, text and initiative/quiet rules. Every switch works on its own. */
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier) {
+fun SettingsScreen(modifier: Modifier = Modifier, activity: Activity? = null) {
     val s by Graph.settings.flow.collectAsState()
     val voice by Graph.speech.status.collectAsState()
     val d = s.dialogue
@@ -61,7 +63,12 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             SwitchRow(R.string.settings_voice_on, s.voiceEnabled) { v -> Graph.settings.update { it.copy(voiceEnabled = v) }; if (!v) Graph.speech.stop() }
             SwitchRow(R.string.settings_show_text, s.showText) { v -> Graph.settings.update { it.copy(showText = v) } }
             Text(stringResource(R.string.settings_lang), style = MaterialTheme.typography.labelLarge)
-            Radio(listOf(Lang.AR to "العربية", Lang.EN to "English"), d.lang) { v -> Graph.settings.update { it.copy(dialogue = it.dialogue.copy(lang = v)) } }
+            Radio(listOf(Lang.AR to "العربية", Lang.EN to "English"), d.lang) { v ->
+                // applyLang saves the locale, updates the setting, then recreates the Activity
+                // so every string resource immediately reflects the new language.
+                (activity as? MainActivity)?.applyLang(v)
+                    ?: Graph.settings.update { it.copy(dialogue = it.dialogue.copy(lang = v)) }
+            }
             Text(stringResource(R.string.settings_dialect), style = MaterialTheme.typography.labelLarge)
             Radio(listOf(Dialect.NEUTRAL to stringResource(R.string.dialect_neutral), Dialect.JORDANIAN to stringResource(R.string.dialect_jordanian)), d.dialect) { v ->
                 Graph.settings.update { it.copy(dialogue = it.dialogue.copy(dialect = v)) }

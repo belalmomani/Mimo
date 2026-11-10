@@ -50,4 +50,8 @@ class ReminderManager(private val storage: ReminderStorage, private val time: Ti
     /** Reminders whose trigger lies in (from, to] - what to show when the alarm wakes us. */
     fun due(from: Long, to: Long): List<Reminder> =
         storage.all().filter { r -> nextFor(r, from)?.let { it <= to } == true }
+
+    /** All reminders paired with their state — used by the stats screen. */
+    fun allWithState(): List<Pair<Reminder, ReminderState>> =
+        storage.all().map { r -> r to state(r.id) }
 }

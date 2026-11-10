@@ -12,6 +12,16 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Required by Start.io for apps targeting API 31+ (see the vendor's integration guide). -->
     <uses-permission android:name="android.permission.AD_ID" />
+    <!-- Coarse location for auto-detecting the nearest city in prayer times.
+         The user is asked at the moment they tap the auto-detect button; nothing runs in the background. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Microphone for voice-input reminder creation. Asked only when the user taps the mic button. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Step counter — required on Android 10+ (API 29) to read TYPE_STEP_COUNTER.
+         Asked only when the user opens the Steps tab. No background use. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- The step-counter sensor is optional; the Steps tab degrades gracefully if absent. -->
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
     <application
         android:name=".MimoApp"
