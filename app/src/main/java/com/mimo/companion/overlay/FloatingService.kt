@@ -45,6 +45,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -64,6 +67,7 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
     private lateinit var prefs: OverlayPrefs
     private var view: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
+    private var idleJob: Job? = null
 
     override fun onCreate() {
         savedStateController.performAttach()
@@ -127,8 +131,27 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
         }
         view = cv
         wm.addView(cv, params)
-        // make sure the active look is current even if the app process was just (re)created
-        lifecycleScope.launch(Dispatchers.IO) { Graph.loadActiveSkin(); Graph.maybeSpeak(PhraseCategory.GREETING) }
+        // make sure the active look is current, then greet and start the idle loop
+        lifecycleScope.launch(Dispatchers.IO) {
+            Graph.loadActiveSkin()
+            Graph.maybeSpeak(PhraseCategory.GREETING)
+        }
+        startIdleLoop()
+    }
+
+    /**
+     * Fires [Graph.maybeSpeakFromContext] every [IDLE_CHECK_MS] milliseconds while the overlay is
+     * visible. DialogueManager enforces rate-limits and quiet hours internally — we just poke it.
+     */
+    private fun startIdleLoop() {
+        idleJob?.cancel()
+        idleJob = lifecycleScope.launch(Dispatchers.Default) {
+            delay(IDLE_INITIAL_DELAY_MS)          // wait a bit before the first idle check
+            while (isActive) {
+                Graph.maybeSpeakFromContext()
+                delay(IDLE_CHECK_MS)
+            }
+        }
     }
 
     private fun dragListener() = object : View.OnTouchListener {
@@ -158,6 +181,7 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
 
     override fun onDestroy() {
         running = false
+        idleJob?.cancel()
         view?.let { try { wm.removeView(it) } catch (_: Exception) {} }
         view = null
         super.onDestroy()
@@ -167,6 +191,10 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
 
     companion object {
         const val ACTION_STOP = "com.mimo.companion.STOP_OVERLAY"
+        /** First idle check fires 90 seconds after the overlay appears (let the greeting finish). */
+        private const val IDLE_INITIAL_DELAY_MS = 90_000L
+        /** Then check every 5 minutes; DialogueManager's own rate-limit decides whether to speak. */
+        private const val IDLE_CHECK_MS = 5 * 60_000L
         @Volatile var running = false; private set
 
         fun start(context: Context) {

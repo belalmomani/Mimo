@@ -36,7 +36,7 @@ data class Phrase(
 }
 
 data class DialogueSettings(
-    val mode: InitiativeMode = InitiativeMode.QUIET,
+    val mode: InitiativeMode = InitiativeMode.SOCIAL,
     /** In CUSTOM mode only these proactive categories may start a conversation. */
     val allowedProactive: Set<PhraseCategory> = emptySet(),
     val dialect: Dialect = Dialect.NEUTRAL,

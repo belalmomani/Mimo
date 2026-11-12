@@ -32,7 +32,7 @@ class SettingsStore(context: Context) {
                 speechRate = p.getFloat("rate", 1f).coerceIn(0.5f, 1.5f),
                 voiceSource = enumOr(p.getString("voiceSource", null), VoiceSource.TTS_ONLY),
                 dialogue = DialogueSettings(
-                    mode = enumOr(p.getString("mode", null), InitiativeMode.QUIET),
+                    mode = enumOr(p.getString("mode", null), InitiativeMode.SOCIAL),
                     allowedProactive = p.getStringSet("allowed", emptySet())!!.mapNotNull { n -> PhraseCategory.values().firstOrNull { it.name == n } }.toSet(),
                     dialect = enumOr(p.getString("dialect", null), Dialect.NEUTRAL),
                     lang = enumOr(p.getString("lang", null), Lang.AR),
