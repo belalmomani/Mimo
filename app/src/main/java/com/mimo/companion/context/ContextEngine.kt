@@ -67,7 +67,7 @@ class ContextEngine(
 
         val city = com.mimo.companion.domain.prayer.Cities.byId(settings.cityId)
         val date = Instant.ofEpochMilli(nowMillis).atZone(city.zone).toLocalDate()
-        val times = PrayerCalculator.calculate(date, city.lat, city.lng, settings)
+        val prayerDay = PrayerCalculator.compute(date, city.lat, city.lng, city.zone, settings.method, settings.asr)
 
         // Find the next prayer that is still in the future
         val prayerOrder = listOf(Prayer.FAJR, Prayer.DHUHR, Prayer.ASR, Prayer.MAGHRIB, Prayer.ISHA)
@@ -75,7 +75,8 @@ class ContextEngine(
         var nearestLabel: String? = null
 
         for (prayer in prayerOrder) {
-            val prayerMin = times[prayer] ?: continue
+            val prayerTime = prayerDay[prayer] ?: continue
+            val prayerMin = prayerTime.hour * 60 + prayerTime.minute
             val minutesUntil = prayerMin - minuteOfDay
             // If past midnight wrap (e.g. FAJR tomorrow when it's 23:30)
             val adjusted = if (minutesUntil < 0) minutesUntil + 1440 else minutesUntil
