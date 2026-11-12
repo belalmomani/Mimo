@@ -18,6 +18,20 @@ class SettingsStore(context: Context) {
     val flow: StateFlow<CompanionSettings> get() = _flow
     val value: CompanionSettings get() = _flow.value
 
+    init { migrate() }
+
+    /**
+     * One-time migration: if the stored mode is QUIET and the user never explicitly set it
+     * (tracked by "modeSetByUser"), upgrade it to SOCIAL so the companion actually talks.
+     * The flag is written so we don't overwrite a deliberate QUIET choice on later launches.
+     */
+    private fun migrate() {
+        if (!p.getBoolean("modeSetByUser", false) && p.getString("mode", null) == InitiativeMode.QUIET.name) {
+            p.edit().putString("mode", InitiativeMode.SOCIAL.name).putBoolean("modeSetByUser", true).apply()
+            _flow.value = load()
+        }
+    }
+
     fun update(change: (CompanionSettings) -> CompanionSettings) {
         val next = change(_flow.value)
         save(next); _flow.value = next
@@ -48,7 +62,7 @@ class SettingsStore(context: Context) {
     private fun save(s: CompanionSettings) {
         p.edit()
             .putBoolean("voice", s.voiceEnabled).putBoolean("showText", s.showText).putFloat("rate", s.speechRate).putString("voiceSource", s.voiceSource.name)
-            .putString("mode", s.dialogue.mode.name).putStringSet("allowed", s.dialogue.allowedProactive.map { it.name }.toSet())
+            .putString("mode", s.dialogue.mode.name).putBoolean("modeSetByUser", true).putStringSet("allowed", s.dialogue.allowedProactive.map { it.name }.toSet())
             .putString("dialect", s.dialogue.dialect.name).putString("lang", s.dialogue.lang.name)
             .putInt("qs", s.dialogue.quietStartMin).putInt("qe", s.dialogue.quietEndMin)
             .putInt("maxHour", s.dialogue.maxProactivePerHour).putInt("minGap", s.dialogue.minSecondsBetweenProactive)

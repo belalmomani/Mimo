@@ -44,8 +44,8 @@ data class DialogueSettings(
     /** Quiet hours as minutes since midnight; equal start/end = disabled. May wrap midnight (e.g. 22:00-07:00). */
     val quietStartMin: Int = 23 * 60,
     val quietEndMin: Int = 7 * 60,
-    val maxProactivePerHour: Int = 3,
-    val minSecondsBetweenProactive: Int = 20 * 60,
+    val maxProactivePerHour: Int = 6,
+    val minSecondsBetweenProactive: Int = 10 * 60,  // 10 min minimum gap between phrases
 ) {
     init {
         require(quietStartMin in 0..1439 && quietEndMin in 0..1439)
