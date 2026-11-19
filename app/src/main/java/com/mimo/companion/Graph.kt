@@ -18,7 +18,10 @@ import com.mimo.companion.domain.dialogue.DialogueContext
 import com.mimo.companion.domain.dialogue.DialogueDecision
 import com.mimo.companion.domain.dialogue.DialogueManager
 import com.mimo.companion.domain.dialogue.PhraseCategory
+import com.mimo.companion.domain.weather.WeatherRepository
 import com.mimo.companion.settings.SettingsStore
+import com.mimo.companion.weather.OWMClient
+import com.mimo.companion.weather.WeatherStore
 import com.mimo.companion.settings.PrayerSettingsStore
 import com.mimo.companion.data.db.RoomPrayerStorage
 import com.mimo.companion.domain.prayer.PrayerService
@@ -32,6 +35,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -52,9 +56,13 @@ object Graph {
     lateinit var customVoices: com.mimo.companion.speech.CustomVoiceStore; private set
     lateinit var speech: SpeechController; private set
     lateinit var steps: com.mimo.companion.steps.StepCounter; private set
+    lateinit var stepActivity: com.mimo.companion.domain.steps.StepActivityTracker; private set
     lateinit var voiceInput: com.mimo.companion.voice.VoiceInputLauncher; private set
     lateinit var contextEngine: com.mimo.companion.context.ContextEngine; private set
     lateinit var focus: com.mimo.companion.focus.FocusManager; private set
+    lateinit var dailyVerse: com.mimo.companion.domain.verse.DailyVerseRepository; private set
+    lateinit var weather: WeatherRepository; private set
+    lateinit var weatherSettings: com.mimo.companion.settings.WeatherSettingsStore; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -84,9 +92,27 @@ object Graph {
         prayer = PrayerService(RoomPrayerStorage(db))
         prayerSettings = PrayerSettingsStore(context)
         customVoices = com.mimo.companion.speech.CustomVoiceStore(context)
-        steps = com.mimo.companion.steps.StepCounter(context).also { it.start() }
+        stepActivity = com.mimo.companion.domain.steps.StepActivityTracker()
+        steps = com.mimo.companion.steps.StepCounter(context).also { sc ->
+            sc.start()
+            // Wire step updates into the activity tracker
+            scope.launch {
+                sc.state.collect { s ->
+                    if (s.available && !s.permissionNeeded) {
+                        stepActivity.onSteps(s.todaySteps)
+                    }
+                }
+            }
+        }
         voiceInput = com.mimo.companion.voice.VoiceInputLauncher(context)
         focus = com.mimo.companion.focus.FocusManager()
+        dailyVerse = com.mimo.companion.domain.verse.DailyVerseRepository(
+            com.mimo.companion.verse.DailyVerseStore(context)
+        )
+        weatherSettings = com.mimo.companion.settings.WeatherSettingsStore(context)
+        weather = WeatherRepository(WeatherStore(context)) { lat, lon, apiKey ->
+            OWMClient.fetchBlocking(lat, lon, apiKey)   // called from IO thread via buildSnapshotAsync
+        }
         contextEngine = com.mimo.companion.context.ContextEngine(
             context = appContext,
             stepCounter = steps,
@@ -114,8 +140,29 @@ object Graph {
     fun buildSnapshot(): com.mimo.companion.domain.context.ContextSnapshot {
         val am = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val inCall = am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
-        return contextEngine.snapshot().copy(inCall = inCall, focusSession = focus.isActive)
+        val lang = settings.value.dialogue.lang.name.lowercase()
+        return contextEngine.snapshot().copy(
+            inCall = inCall,
+            focusSession = focus.isActive,
+            minutesSinceMove = stepActivity.minutesSinceMove(),
+            dailyVerseText = dailyVerse.todayVerse(lang),
+            weather = weather.cachedOrNull(),
+        )
     }
+
+    /**
+     * Async variant: fetches fresh weather from the network if the cache is stale,
+     * then returns a snapshot with up-to-date weather data.
+     * Call this from the idle loop (background coroutine); never from the main thread.
+     */
+    suspend fun buildSnapshotAsync(): com.mimo.companion.domain.context.ContextSnapshot =
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val ws = weatherSettings
+            val weatherData = if (ws.enabled && ws.apiKey.isNotBlank()) {
+                weather.current(ws.lat, ws.lon, ws.apiKey) // blocking fetch on IO thread
+            } else null
+            buildSnapshot().copy(weather = weatherData)
+        }
 
     /** The user tapped the companion. */
     fun onTapped() = present(dialogue.reply())
@@ -129,11 +176,39 @@ object Graph {
      * Call this from the overlay service's idle timer instead of [maybeSpeak].
      */
     fun maybeSpeakFromContext() {
-        val snapshot = buildSnapshot()
+        scope.launch { maybeSpeakFromContextAsync() }
+    }
+
+    private suspend fun maybeSpeakFromContextAsync() {
+        val snapshot = buildSnapshotAsync()
         val category = com.mimo.companion.domain.context.ContextAdvisor.bestCategory(snapshot)
             ?: return // nothing relevant to say right now
         val ctx = DialogueContext(inCall = snapshot.inCall, focusSession = snapshot.focusSession)
-        present(dialogue.proactive(category, ctx))
+        when (category) {
+            PhraseCategory.DAILY_VERSE -> {
+                val decision = dialogue.proactive(category, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say && snapshot.dailyVerseText != null) {
+                    val fullText = "${decision.text}\n${snapshot.dailyVerseText}"
+                    present(decision.copy(text = fullText))
+                    dailyVerse.markSaidToday()
+                }
+            }
+            PhraseCategory.WEATHER -> {
+                val condition = snapshot.weatherCondition ?: return
+                val decision = dialogue.proactiveWeather(condition, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say) {
+                    val tempStr = snapshot.weather?.tempC?.let { kotlin.math.roundToInt(it).toString() } ?: ""
+                    val text = decision.text.replace("{temp}", tempStr)
+                    present(decision.copy(text = text))
+                }
+            }
+            else -> {
+                val decision = dialogue.proactive(category, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say) {
+                    present(decision)
+                }
+            }
+        }
     }
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
@@ -167,6 +242,8 @@ object Graph {
             else -> speech.playClip(clip.file, tts, tts)
         }
     }
+
+    private fun present(d: com.mimo.companion.domain.dialogue.DialogueDecision.Say) = present(d as DialogueDecision)
 
     private fun present(d: DialogueDecision) {
         if (d !is DialogueDecision.Say) return

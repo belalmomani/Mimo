@@ -133,4 +133,55 @@ class ContextModelsTest {
     @Test fun screenBreakNotSuggested_zero() {
         assertFalse(ContextSnapshot(TimeOfDay.AFTERNOON, screenOnMinutes = 0).screenBreakSuggested)
     }
+
+    // ── moveReminderSuggested ─────────────────────────────────────────────────
+
+    @Test fun moveReminder_null_isFalse() {
+        assertFalse(ContextSnapshot(TimeOfDay.AFTERNOON, minutesSinceMove = null).moveReminderSuggested)
+    }
+
+    @Test fun moveReminder_belowThreshold_isFalse() {
+        val t = ContextSnapshot.MOVE_THRESHOLD_MIN
+        assertFalse(ContextSnapshot(TimeOfDay.AFTERNOON, minutesSinceMove = t - 1).moveReminderSuggested)
+    }
+
+    @Test fun moveReminder_atThreshold_isTrue() {
+        val t = ContextSnapshot.MOVE_THRESHOLD_MIN
+        assertTrue(ContextSnapshot(TimeOfDay.AFTERNOON, minutesSinceMove = t).moveReminderSuggested)
+    }
+
+    @Test fun moveReminder_aboveThreshold_isTrue() {
+        assertTrue(ContextSnapshot(TimeOfDay.AFTERNOON, minutesSinceMove = 90).moveReminderSuggested)
+    }
+
+    // ── weatherAvailable ──────────────────────────────────────────────────────
+
+    @Test fun weatherAvailable_null_isFalse() {
+        assertFalse(ContextSnapshot(TimeOfDay.AFTERNOON, weather = null).weatherAvailable)
+    }
+
+    @Test fun weatherAvailable_staleData_isFalse() {
+        val nowSec = System.currentTimeMillis() / 1_000L
+        val stale = com.mimo.companion.domain.weather.WeatherData(
+            com.mimo.companion.domain.weather.WeatherCondition.SUNNY, 25.0, fetchedAtSec = nowSec - 40 * 60
+        )
+        assertFalse(ContextSnapshot(TimeOfDay.AFTERNOON, weather = stale).weatherAvailable)
+    }
+
+    @Test fun weatherAvailable_freshData_isTrue() {
+        val nowSec = System.currentTimeMillis() / 1_000L
+        val fresh = com.mimo.companion.domain.weather.WeatherData(
+            com.mimo.companion.domain.weather.WeatherCondition.SUNNY, 25.0, fetchedAtSec = nowSec - 60
+        )
+        assertTrue(ContextSnapshot(TimeOfDay.AFTERNOON, weather = fresh).weatherAvailable)
+    }
+
+    @Test fun weatherCondition_matchesFreshData() {
+        val nowSec = System.currentTimeMillis() / 1_000L
+        val fresh = com.mimo.companion.domain.weather.WeatherData(
+            com.mimo.companion.domain.weather.WeatherCondition.RAINY, 18.0, fetchedAtSec = nowSec - 60
+        )
+        assertEquals(com.mimo.companion.domain.weather.WeatherCondition.RAINY,
+            ContextSnapshot(TimeOfDay.AFTERNOON, weather = fresh).weatherCondition)
+    }
 }
