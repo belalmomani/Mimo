@@ -197,7 +197,7 @@ object Graph {
                 val condition = snapshot.weatherCondition ?: return
                 val decision = dialogue.proactiveWeather(condition, ctx)
                 if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say) {
-                    val tempStr = snapshot.weather?.tempC?.let { kotlin.math.roundToInt(it).toString() } ?: ""
+                    val tempStr = snapshot.weather?.tempC?.let { it.roundToInt().toString() } ?: ""
                     val text = decision.text.replace("{temp}", tempStr)
                     present(decision.copy(text = text))
                 }
