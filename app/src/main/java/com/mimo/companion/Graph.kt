@@ -18,7 +18,13 @@ import com.mimo.companion.domain.dialogue.DialogueContext
 import com.mimo.companion.domain.dialogue.DialogueDecision
 import com.mimo.companion.domain.dialogue.DialogueManager
 import com.mimo.companion.domain.dialogue.PhraseCategory
+import com.mimo.companion.domain.custom.CustomPhraseRepository
+import com.mimo.companion.domain.custom.PhraseEvent
+import com.mimo.companion.domain.weather.WeatherRepository
+import com.mimo.companion.custom.CustomPhraseStore
 import com.mimo.companion.settings.SettingsStore
+import com.mimo.companion.weather.OWMClient
+import com.mimo.companion.weather.WeatherStore
 import com.mimo.companion.settings.PrayerSettingsStore
 import com.mimo.companion.data.db.RoomPrayerStorage
 import com.mimo.companion.domain.prayer.PrayerService
@@ -32,6 +38,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -52,9 +59,14 @@ object Graph {
     lateinit var customVoices: com.mimo.companion.speech.CustomVoiceStore; private set
     lateinit var speech: SpeechController; private set
     lateinit var steps: com.mimo.companion.steps.StepCounter; private set
+    lateinit var stepActivity: com.mimo.companion.domain.steps.StepActivityTracker; private set
     lateinit var voiceInput: com.mimo.companion.voice.VoiceInputLauncher; private set
     lateinit var contextEngine: com.mimo.companion.context.ContextEngine; private set
     lateinit var focus: com.mimo.companion.focus.FocusManager; private set
+    lateinit var dailyVerse: com.mimo.companion.domain.verse.DailyVerseRepository; private set
+    lateinit var weather: WeatherRepository; private set
+    lateinit var weatherSettings: com.mimo.companion.settings.WeatherSettingsStore; private set
+    lateinit var customPhrases: CustomPhraseRepository; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -84,9 +96,28 @@ object Graph {
         prayer = PrayerService(RoomPrayerStorage(db))
         prayerSettings = PrayerSettingsStore(context)
         customVoices = com.mimo.companion.speech.CustomVoiceStore(context)
-        steps = com.mimo.companion.steps.StepCounter(context).also { it.start() }
+        stepActivity = com.mimo.companion.domain.steps.StepActivityTracker()
+        steps = com.mimo.companion.steps.StepCounter(context).also { sc ->
+            sc.start()
+            // Wire step updates into the activity tracker
+            scope.launch {
+                sc.state.collect { s ->
+                    if (s.available && !s.permissionNeeded) {
+                        stepActivity.onSteps(s.todaySteps)
+                    }
+                }
+            }
+        }
         voiceInput = com.mimo.companion.voice.VoiceInputLauncher(context)
         focus = com.mimo.companion.focus.FocusManager()
+        dailyVerse = com.mimo.companion.domain.verse.DailyVerseRepository(
+            com.mimo.companion.verse.DailyVerseStore(context)
+        )
+        weatherSettings = com.mimo.companion.settings.WeatherSettingsStore(context)
+        customPhrases = CustomPhraseRepository(CustomPhraseStore(context))
+        weather = WeatherRepository(WeatherStore(context)) { lat, lon, apiKey ->
+            OWMClient.fetchBlocking(lat, lon, apiKey)   // called from IO thread via buildSnapshotAsync
+        }
         contextEngine = com.mimo.companion.context.ContextEngine(
             context = appContext,
             stepCounter = steps,
@@ -97,6 +128,30 @@ object Graph {
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
         adProvider = if (BuildConfig.ADS_ENABLED) StartIoRewardedProvider(context.applicationContext).also { it.init() } else DisabledRewardedAdProvider
+        startScheduleLoop()
+    }
+
+    /**
+     * Checks every minute for SCHEDULE/SLEEP custom phrases whose time matches the current clock.
+     * Fires at most once per minute; DialogueManager rate-limits are NOT applied here — the user
+     * explicitly scheduled these phrases.
+     */
+    private fun startScheduleLoop() {
+        scope.launch(Dispatchers.Default) {
+            while (true) {
+                delay(60_000L)  // check every minute
+                if (!com.mimo.companion.overlay.FloatingService.running) continue
+                val cal = java.util.Calendar.getInstance()
+                val h = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                val m = cal.get(java.util.Calendar.MINUTE)
+                // SCHEDULE: exact hour:minute match
+                val scheduled = customPhrases.scheduledFor(h, m)
+                if (scheduled.isNotEmpty()) presentCustom(scheduled.random())
+                // SLEEP: bedtime phrases
+                val sleep = customPhrases.sleepPhrases().filter { it.scheduleHour == h && it.scheduleMin == m }
+                if (sleep.isNotEmpty()) presentCustom(sleep.random())
+            }
+        }
     }
 
     /** Must be called off the main thread (reads the database). */
@@ -114,11 +169,71 @@ object Graph {
     fun buildSnapshot(): com.mimo.companion.domain.context.ContextSnapshot {
         val am = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val inCall = am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
-        return contextEngine.snapshot().copy(inCall = inCall, focusSession = focus.isActive)
+        val lang = settings.value.dialogue.lang.name.lowercase()
+        return contextEngine.snapshot().copy(
+            inCall = inCall,
+            focusSession = focus.isActive,
+            minutesSinceMove = stepActivity.minutesSinceMove(),
+            dailyVerseText = dailyVerse.todayVerse(lang),
+            weather = weather.cachedOrNull(),
+        )
     }
 
-    /** The user tapped the companion. */
-    fun onTapped() = present(dialogue.reply())
+    /**
+     * Async variant: fetches fresh weather from the network if the cache is stale,
+     * then returns a snapshot with up-to-date weather data.
+     * Call this from the idle loop (background coroutine); never from the main thread.
+     */
+    suspend fun buildSnapshotAsync(): com.mimo.companion.domain.context.ContextSnapshot =
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val ws = weatherSettings
+            val weatherData = if (ws.enabled && ws.apiKey.isNotBlank()) {
+                weather.current(ws.lat, ws.lon, ws.apiKey) // blocking fetch on IO thread
+            } else null
+            buildSnapshot().copy(weather = weatherData)
+        }
+
+    /**
+     * The user tapped the companion.
+     * Custom TAP phrases take priority over the built-in PhraseBank reply.
+     */
+    fun onTapped() {
+        val custom = customPhrases.pickForTap()
+        if (custom != null) {
+            presentCustom(custom)
+        } else {
+            present(dialogue.reply())
+        }
+    }
+
+    /**
+     * Play a custom phrase: uses its linked clip (if any) or TTS.
+     * Called for TAP, PRAYER, SLEEP, SCHEDULE events.
+     */
+    fun presentCustom(phrase: com.mimo.companion.domain.custom.CustomPhrase) {
+        val s = settings.value
+        val clip = phrase.clipId?.let { cid -> customVoices.clips.value.firstOrNull { it.id == cid } }
+        val tts = { speech.speak(phrase.text, s.dialogue.lang, s.speechRate) }
+        val spoke = when {
+            !s.voiceEnabled -> false
+            clip != null    -> speech.playClip(clip.file, null, tts) // use clip only, TTS fallback
+            else            -> tts()
+        }
+        if (s.showText) _bubble.value = phrase.text
+        bubbleJob?.cancel()
+        bubbleJob = scope.launch {
+            if (spoke) { delay(400); while (speech.speaking.value) delay(150); delay(2_000) }
+            else delay(3_500)
+            _bubble.value = null
+        }
+    }
+
+    /** Fire custom phrases tied to a [PhraseEvent] (prayer, sleep, schedule, reminder). */
+    fun fireEvent(event: PhraseEvent) {
+        val phrases = customPhrases.forEvent(event)
+        if (phrases.isEmpty()) return
+        scope.launch { presentCustom(phrases.random()) }
+    }
 
     /** The app wants to speak on its own (greeting, suggestions...). Silent unless mode/quiet hours/limits allow it. */
     fun maybeSpeak(category: PhraseCategory) = present(dialogue.proactive(category, currentContext()))
@@ -129,18 +244,72 @@ object Graph {
      * Call this from the overlay service's idle timer instead of [maybeSpeak].
      */
     fun maybeSpeakFromContext() {
-        val snapshot = buildSnapshot()
+        scope.launch { maybeSpeakFromContextAsync() }
+    }
+
+    private suspend fun maybeSpeakFromContextAsync() {
+        val snapshot = buildSnapshotAsync()
         val category = com.mimo.companion.domain.context.ContextAdvisor.bestCategory(snapshot)
             ?: return // nothing relevant to say right now
         val ctx = DialogueContext(inCall = snapshot.inCall, focusSession = snapshot.focusSession)
-        present(dialogue.proactive(category, ctx))
+        when (category) {
+            PhraseCategory.DAILY_VERSE -> {
+                val decision = dialogue.proactive(category, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say && snapshot.dailyVerseText != null) {
+                    val fullText = "${decision.text}\n${snapshot.dailyVerseText}"
+                    present(decision.copy(text = fullText))
+                    dailyVerse.markSaidToday()
+                }
+            }
+            PhraseCategory.WEATHER -> {
+                val condition = snapshot.weatherCondition ?: return
+                val decision = dialogue.proactiveWeather(condition, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say) {
+                    val tempStr = snapshot.weather?.tempC?.let { it.roundToInt().toString() } ?: ""
+                    val text = decision.text.replace("{temp}", tempStr)
+                    present(decision.copy(text = text))
+                }
+            }
+            else -> {
+                val decision = dialogue.proactive(category, ctx)
+                if (decision is com.mimo.companion.domain.dialogue.DialogueDecision.Say) {
+                    present(decision)
+                }
+            }
+        }
+    }
+
+    /**
+     * Shows a short comment triggered by the screen-watch analyser.
+     * Uses TTS only (no clip); respects quiet hours via the bubble timeout.
+     */
+    fun showScreenComment(text: String) {
+        val s = settings.value
+        if (!s.voiceEnabled && !s.showText) return
+        if (s.voiceEnabled) speech.speak(text, s.dialogue.lang, s.speechRate)
+        if (s.showText) _bubble.value = text
+        bubbleJob?.cancel()
+        bubbleJob = scope.launch {
+            delay(5_000)
+            _bubble.value = null
+        }
     }
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
-    fun onReminderDone() { if (com.mimo.companion.overlay.FloatingService.running) present(dialogue.reply(PhraseCategory.ACK_DONE)) }
+    fun onReminderDone() {
+        if (!com.mimo.companion.overlay.FloatingService.running) return
+        val custom = customPhrases.forEvent(PhraseEvent.REMINDER)
+        if (custom.isNotEmpty()) presentCustom(custom.random())
+        else present(dialogue.reply(PhraseCategory.ACK_DONE))
+    }
 
     /** The user logged a prayer: short acknowledgement when the companion is visible. */
-    fun onPrayerLogged() { if (com.mimo.companion.overlay.FloatingService.running) present(dialogue.reply(PhraseCategory.PRAYER_ACK)) }
+    fun onPrayerLogged() {
+        if (!com.mimo.companion.overlay.FloatingService.running) return
+        val custom = customPhrases.forEvent(PhraseEvent.PRAYER)
+        if (custom.isNotEmpty()) presentCustom(custom.random())
+        else present(dialogue.reply(PhraseCategory.PRAYER_ACK))
+    }
 
     /** Text the user asked for (a reminder they set). Not filtered by initiative mode; callers decide about quiet hours. */
     fun announce(text: String, speak: Boolean, show: Boolean) {
@@ -157,16 +326,18 @@ object Graph {
     /** Voice-test button in settings. */
     fun testVoice() = present(dialogue.reply())
 
-    /** Voice output according to the chosen source. The built-in voice is always the fallback; clips only add to it. */
+    /**
+     * Voice output for built-in PhraseBank phrases.
+     *
+     * Custom clips are ONLY played through [presentCustom] where a specific phrase–clip pair is set.
+     * This prevents a clip from "leaking" onto every random phrase in the bank.
+     * The VoiceSource setting is preserved for legacy TTS-rate and speaking-style choices.
+     */
     private fun voice(text: String, s: com.mimo.companion.domain.dialogue.CompanionSettings): Boolean {
-        val tts = { speech.speak(text, s.dialogue.lang, s.speechRate) }
-        val clip = if (s.voiceSource == com.mimo.companion.domain.dialogue.VoiceSource.TTS_ONLY) null else customVoices.pick()
-        return when {
-            clip == null -> tts()
-            s.voiceSource == com.mimo.companion.domain.dialogue.VoiceSource.CLIPS_ONLY -> speech.playClip(clip.file, null, tts)
-            else -> speech.playClip(clip.file, tts, tts)
-        }
+        return speech.speak(text, s.dialogue.lang, s.speechRate)
     }
+
+    private fun present(d: com.mimo.companion.domain.dialogue.DialogueDecision.Say) = present(d as DialogueDecision)
 
     private fun present(d: DialogueDecision) {
         if (d !is DialogueDecision.Say) return

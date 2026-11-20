@@ -18,6 +18,12 @@ enum class PhraseCategory {
     BREAK_SUGGESTION,
     /** Short encouragement, proactive. */
     ENCOURAGE,
+    /** Nudge to move after a long period of inactivity (steps not changing). */
+    MOVE_REMINDER,
+    /** Daily verse or hadith. */
+    DAILY_VERSE,
+    /** Context-aware weather comment (hot, cold, rainy, etc.). */
+    WEATHER,
     /** Reply after the user marked something as done. */
     ACK_DONE,
     /** Reply after the user logged a prayer. */

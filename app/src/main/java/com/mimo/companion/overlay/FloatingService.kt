@@ -49,7 +49,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import android.util.DisplayMetrics
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The floating companion: a transparent TYPE_APPLICATION_OVERLAY window hosting the Compose face.
@@ -68,6 +71,10 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
     private var view: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
     private var idleJob: Job? = null
+
+    /** Screen dimensions in px (updated in attachOverlay). */
+    private var screenW = 0
+    private var screenH = 0
 
     override fun onCreate() {
         savedStateController.performAttach()
@@ -102,14 +109,32 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(1, n)
     }
 
+    /** Returns screen width and height in pixels. */
+    @Suppress("DEPRECATION")
+    private fun updateScreenSize() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            val bounds = wm.currentWindowMetrics.bounds
+            screenW = bounds.width(); screenH = bounds.height()
+        } else {
+            val dm = DisplayMetrics()
+            wm.defaultDisplay.getRealMetrics(dm)
+            screenW = dm.widthPixels; screenH = dm.heightPixels
+        }
+    }
+
     private fun attachOverlay() {
+        updateScreenSize()
+        // Clamp saved position to safe screen area before first placement
+        val safeX = prefs.x.coerceIn(0, maxOf(0, screenW - dpToPx(prefs.sizeDp + 20)))
+        val safeY = prefs.y.coerceIn(0, maxOf(0, screenH - dpToPx(prefs.sizeDp + 20)))
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // NOT_FOCUSABLE: never steals keyboard focus; NOT_TOUCH_MODAL: touches outside pass through to the app below.
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            // FLAG_LAYOUT_NO_LIMITS intentionally omitted — we clamp position manually to keep the companion on-screen.
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START; x = prefs.x; y = prefs.y; alpha = prefs.alpha }
+        ).apply { gravity = Gravity.TOP or Gravity.START; x = safeX; y = safeY; alpha = prefs.alpha }
 
         val cv = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@FloatingService)
@@ -154,17 +179,33 @@ class FloatingService : LifecycleService(), SavedStateRegistryOwner {
         }
     }
 
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+
+    private fun clampX(x: Int): Int {
+        val viewSizePx = dpToPx(prefs.sizeDp)
+        return x.coerceIn(0, maxOf(0, screenW - viewSizePx))
+    }
+
+    private fun clampY(y: Int): Int {
+        val viewSizePx = dpToPx(prefs.sizeDp + 40) // +40dp for bubble height
+        return y.coerceIn(0, maxOf(0, screenH - viewSizePx))
+    }
+
     private fun dragListener() = object : View.OnTouchListener {
         private var startX = 0; private var startY = 0; private var touchX = 0f; private var touchY = 0f; private var moved = false; private var downAt = 0L
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             val slop = ViewConfiguration.get(this@FloatingService).scaledTouchSlop
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { startX = params.x; startY = params.y; touchX = e.rawX; touchY = e.rawY; moved = false; downAt = e.eventTime }
+                MotionEvent.ACTION_DOWN -> {
+                    updateScreenSize() // refresh in case of rotation
+                    startX = params.x; startY = params.y; touchX = e.rawX; touchY = e.rawY; moved = false; downAt = e.eventTime
+                }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - touchX; val dy = e.rawY - touchY
                     if (moved || abs(dx) > slop || abs(dy) > slop) {
                         moved = true
-                        params.x = (startX + dx).toInt(); params.y = (startY + dy).toInt()
+                        params.x = clampX((startX + dx).toInt())
+                        params.y = clampY((startY + dy).toInt())
                         view?.let { wm.updateViewLayout(it, params) }
                     }
                 }

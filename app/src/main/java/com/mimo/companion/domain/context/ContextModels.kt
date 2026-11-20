@@ -1,5 +1,8 @@
 package com.mimo.companion.domain.context
 
+import com.mimo.companion.domain.weather.WeatherCondition
+import com.mimo.companion.domain.weather.WeatherData
+
 /**
  * Broad segment of the day, derived from clock time only.
  * Never guessed from sensor data or battery level.
@@ -77,6 +80,20 @@ data class ContextSnapshot(
     val inCall: Boolean = false,
     /** true when a focus / Do Not Disturb session is running. */
     val focusSession: Boolean = false,
+    /**
+     * Minutes since the step count last changed (i.e. user has been still).
+     * null = step sensor unavailable or not enough data yet.
+     */
+    val minutesSinceMove: Int? = null,
+    /**
+     * A verse or hadith text to say today, or null if already said today / unavailable.
+     * The ContextEngine sets this once per day after fetching from DailyVerseRepository.
+     */
+    val dailyVerseText: String? = null,
+    /**
+     * Most recent weather snapshot; null if the API key is not set or no data is cached yet.
+     */
+    val weather: WeatherData? = null,
 ) {
     /** Whether the user is on track for or has hit the step goal today. */
     val stepGoalMet: Boolean
@@ -86,8 +103,22 @@ data class ContextSnapshot(
     val screenBreakSuggested: Boolean
         get() = screenOnMinutes != null && screenOnMinutes > SCREEN_BREAK_THRESHOLD_MIN
 
+    /** Whether a move nudge is worth making (hasn't moved for ≥ MOVE_THRESHOLD_MIN minutes). */
+    val moveReminderSuggested: Boolean
+        get() = minutesSinceMove != null && minutesSinceMove >= MOVE_THRESHOLD_MIN
+
+    /** Whether a weather comment is worth making (fresh data available). */
+    val weatherAvailable: Boolean
+        get() = weather != null && weather.isFresh()
+
+    /** Convenience accessor for the weather condition. */
+    val weatherCondition: WeatherCondition?
+        get() = if (weatherAvailable) weather?.condition else null
+
     companion object {
         /** Continuous screen-on minutes above which a break nudge becomes relevant. */
         const val SCREEN_BREAK_THRESHOLD_MIN = 45
+        /** Minutes of no step activity after which a move nudge is worth making. */
+        const val MOVE_THRESHOLD_MIN = 60
     }
 }

@@ -10,6 +10,19 @@ plugins {
 val startIoAppId: String = (project.findProperty("STARTIO_APP_ID") as String?)?.trim().orEmpty()
 val adsEnabled: Boolean = (project.findProperty("ADS_ENABLED") as String?)?.toBoolean() ?: true
 
+// versionCode auto-increments on every build so "adb install -r" (and sideloading) works as an
+// upgrade rather than a reinstall.  The counter lives in version.properties next to this file;
+// it starts at 1 and goes up by 1 each time Gradle configures the project.
+val versionProps = Properties().apply {
+    val f = project.file("version.properties")
+    if (f.exists()) f.inputStream().use { load(it) } else setProperty("BUILD_NUMBER", "1")
+}
+val buildNumber: Int = (versionProps.getProperty("BUILD_NUMBER", "1").toIntOrNull() ?: 1)
+    .also { current ->
+        versionProps.setProperty("BUILD_NUMBER", (current + 1).toString())
+        project.file("version.properties").outputStream().use { versionProps.store(it, null) }
+    }
+
 // Optional release signing, read from the environment / keystore.properties so that NO secret is committed.
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
@@ -24,8 +37,8 @@ android {
         applicationId = "com.mimo.companion" // fixed: never change after publishing
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.2.0"
+        versionCode = buildNumber
+        versionName = "0.2.$buildNumber"
         buildConfigField("String", "STARTIO_APP_ID", "\"$startIoAppId\"")
         buildConfigField("boolean", "ADS_ENABLED", adsEnabled.toString())
     }

@@ -20,6 +20,8 @@
     <!-- Step counter — required on Android 10+ (API 29) to read TYPE_STEP_COUNTER.
          Asked only when the user opens the Steps tab. No background use. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- Screen capture for "ميمو يرى شاشتك" feature (MediaProjection). User must grant at runtime. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- The step-counter sensor is optional; the Steps tab degrades gracefully if absent. -->
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
@@ -66,5 +68,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Displays the user-enabled floating companion character over other apps" />
         </service>
+
+        <!-- Screen-watch service: runs only while the user has enabled "ميمو يرى شاشتك" -->
+        <service
+            android:name=".screen.ScreenWatchService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
     </application>
 </manifest>

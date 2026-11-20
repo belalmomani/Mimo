@@ -47,6 +47,9 @@ import androidx.compose.ui.platform.LocalContext
 import android.provider.OpenableColumns
 import android.widget.Toast
 import com.mimo.companion.speech.VoiceStatus
+import com.mimo.companion.screen.ScreenWatchService
+import android.content.Context
+import android.media.projection.MediaProjectionManager
 import java.util.Locale
 
 /** "شخصيتي وقواعدي" - first slice: voice, text and initiative/quiet rules. Every switch works on its own. */
@@ -84,6 +87,25 @@ fun SettingsScreen(modifier: Modifier = Modifier, activity: Activity? = null) {
         }
 
         MyVoiceSection(s.voiceSource)
+
+        // ── Custom phrases entry point ────────────────────────────────────────
+        var showCustomPhrases by remember { mutableStateOf(false) }
+        if (showCustomPhrases) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showCustomPhrases = false }) {
+                Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    CustomPhrasesScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showCustomPhrases = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("🗣 عباراتي المخصصة")
+        }
+
+        // ── Screen-watch toggle ───────────────────────────────────────────────
+        ScreenWatchToggle(activity)
 
         Section(R.string.settings_behaviour) {
             Text(stringResource(R.string.settings_initiative), style = MaterialTheme.typography.labelLarge)
@@ -130,6 +152,54 @@ private fun <T> Radio(options: List<Pair<T, String>>, selected: T, onSelect: (T)
         options.forEach { (value, label) ->
             Row(Modifier.fillMaxWidth().selectable(selected == value, onClick = { onSelect(value) }, role = Role.RadioButton), verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected == value, onClick = null); Text(label, Modifier.padding(start = 8.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Toggle that lets the user enable/disable "ميمو يرى شاشتك".
+ * On first enable it launches the system MediaProjection permission dialog;
+ * on disable it stops the ScreenWatchService.
+ */
+@Composable
+private fun ScreenWatchToggle(activity: Activity?) {
+    val ctx = LocalContext.current
+    var watching by remember { mutableStateOf(ScreenWatchService.running) }
+
+    val projectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            ScreenWatchService.start(ctx, result.resultCode, result.data!!)
+            watching = true
+        }
+    }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.weight(1f)) {
+                    Text("👁 ميمو يرى شاشتك", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "ميمو يلقي نظرة كل 30 ثانية ويعلّق بلطف. الصور تُحلَّل محلياً ولا تُرسَل لأي مكان.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = watching,
+                    onCheckedChange = { enable ->
+                        if (enable) {
+                            val mpm = ctx.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                            projectionLauncher.launch(mpm.createScreenCaptureIntent())
+                        } else {
+                            ScreenWatchService.stop(ctx)
+                            watching = false
+                        }
+                    },
+                )
             }
         }
     }

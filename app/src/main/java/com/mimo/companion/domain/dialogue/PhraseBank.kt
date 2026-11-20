@@ -3,11 +3,14 @@ package com.mimo.companion.domain.dialogue
 import com.mimo.companion.domain.dialogue.Dialect.JORDANIAN
 import com.mimo.companion.domain.dialogue.PhraseCategory.ACK_DONE
 import com.mimo.companion.domain.dialogue.PhraseCategory.BREAK_SUGGESTION
+import com.mimo.companion.domain.dialogue.PhraseCategory.DAILY_VERSE
 import com.mimo.companion.domain.dialogue.PhraseCategory.ENCOURAGE
 import com.mimo.companion.domain.dialogue.PhraseCategory.GREETING
 import com.mimo.companion.domain.dialogue.PhraseCategory.IDLE_CHAT
+import com.mimo.companion.domain.dialogue.PhraseCategory.MOVE_REMINDER
 import com.mimo.companion.domain.dialogue.PhraseCategory.PRAYER_ACK
 import com.mimo.companion.domain.dialogue.PhraseCategory.TAP_REPLY
+import com.mimo.companion.domain.dialogue.PhraseCategory.WEATHER
 
 /**
  * Adult, natural tone - no childish forms. Suggestions are phrased as possibilities, never as claims about
@@ -45,6 +48,45 @@ object PhraseBank {
         p("en1", ENCOURAGE, "خطوة خطوة، وبتوصل.", "One step at a time.", JORDANIAN),
         p("en2", ENCOURAGE, "أنت تتقدّم، استمر.", "You're making progress, keep going."),
         p("en3", ENCOURAGE, "وقت مناسب لإنجاز مهمة صغيرة.", "A good moment for one small task."),
+
+        // ── Move reminder ─────────────────────────────────────────────────────
+        p("mv1", MOVE_REMINDER, "ما سجّلنا حركة من فترة، شو رأيك تتمشى دقيقتين؟", "No movement in a while — how about a two-minute walk?", JORDANIAN),
+        p("mv2", MOVE_REMINDER, "صار لك وقت من دون تحرّك. مشي قصير يفيدك.", "You've been still for a while. A short walk would do you good."),
+        p("mv3", MOVE_REMINDER, "الحركة مهمة. بضع خطوات؟", "Movement matters. A few steps?"),
+        p("mv4", MOVE_REMINDER, "لاحظنا ما في خطوات من فترة. شو رأيك تقوم شوي؟", "No steps for a while. How about getting up for a bit?", JORDANIAN),
+
+        // ── Daily verse (intro line; full text injected by Graph.present) ────
+        p("dv1", DAILY_VERSE, "آية اليوم:", "Today's verse:"),
+        p("dv2", DAILY_VERSE, "حديث اليوم:", "Today's hadith:"),
+
+        // ── Weather — {temp} replaced at runtime with rounded °C value ───────
+        // HOT
+        p("wt_hot1", WEATHER, "الجو حار اليوم، {temp} درجة. لا تنسَ تشرب ماء كافي.", "It's hot today, {temp}°C. Don't forget to stay hydrated."),
+        p("wt_hot2", WEATHER, "جو حار هالأيام. اشرب ماي وابقَ بالظل لو قدرت.", "Hot weather today. Drink water and stay in the shade if you can.", JORDANIAN),
+        // COLD
+        p("wt_cold1", WEATHER, "الطقس بارد اليوم، {temp} درجة. ارتدِ ما يدفئك.", "Cold today, {temp}°C. Bundle up."),
+        p("wt_cold2", WEATHER, "برد هالأيام. خلّي معك كنزة.", "It's cold. Keep a jacket with you.", JORDANIAN),
+        // RAINY
+        p("wt_rain1", WEATHER, "في مطر اليوم. خذ معك مظلة إن خرجت.", "Rain today — grab an umbrella if you're heading out."),
+        p("wt_rain2", WEATHER, "يوم ممطر. المشي تحت المطر منيح للعقل لو ما عندك وين تروح.", "Rainy day. A walk in light rain is great if you don't mind getting damp.", JORDANIAN),
+        // STORMY
+        p("wt_storm1", WEATHER, "جو عاصف اليوم. حاول تقلّل الخروج غير الضروري.", "Stormy weather today. Best to stay in unless you really need to head out."),
+        p("wt_storm2", WEATHER, "في عواصف. خلّي نفسك بأمان اليوم.", "Storm outside. Take care today.", JORDANIAN),
+        // SNOWY
+        p("wt_snow1", WEATHER, "في ثلج اليوم. الطرق قد تكون زلقة، انتبه.", "Snowy today. Roads may be slippery — take care."),
+        p("wt_snow2", WEATHER, "الثلج نازل. لبّس وخذ خطواتك بحذر.", "It's snowing. Dress warm and watch your step.", JORDANIAN),
+        // FOGGY
+        p("wt_fog1", WEATHER, "يوم ضبابي. القيادة بالضباب تحتاج تركيز.", "Foggy day. Drive carefully if you're heading out."),
+        p("wt_fog2", WEATHER, "ضباب كثير اليوم. خلّي الضوء شاغل لو بتسوق.", "Heavy fog today. Keep your lights on if you're driving.", JORDANIAN),
+        // SUNNY
+        p("wt_sun1", WEATHER, "الجو صافي اليوم، {temp} درجة. وقت مناسب لبضع خطوات بالخارج.", "Clear skies today, {temp}°C. A nice time for a few steps outside."),
+        p("wt_sun2", WEATHER, "يوم مشمس. لو تقدر، اطلع شوي تاخذ هوا.", "Sunny day. Step out for a bit of fresh air if you can.", JORDANIAN),
+        // CLOUDY
+        p("wt_cloud1", WEATHER, "الجو غائم اليوم. مريح للمشي إن أردت.", "Overcast today — comfortable for a walk if you fancy one."),
+        p("wt_cloud2", WEATHER, "يوم غيوم. مش حار ومش بارد، وقت مناسب تتمشى.", "Cloudy day. Not too hot, not too cold — good for a stroll.", JORDANIAN),
+        // WINDY
+        p("wt_wind1", WEATHER, "الرياح قوية اليوم. انتبه لو خرجت.", "Windy today. Watch out if you're heading out."),
+        p("wt_wind2", WEATHER, "في هوا كثير اليوم. مناسب لبس خفيف مع كنزة.", "It's quite windy today. Light layers would work well.", JORDANIAN),
 
         p("ak1", ACK_DONE, "تمام، سجّلتها.", "Done, noted."),
         p("ak2", ACK_DONE, "ممتاز، سجّلت ذلك.", "Great, I've logged it."),
