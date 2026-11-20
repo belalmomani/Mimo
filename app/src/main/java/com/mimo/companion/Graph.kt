@@ -18,10 +18,14 @@ import com.mimo.companion.domain.dialogue.DialogueContext
 import com.mimo.companion.domain.dialogue.DialogueDecision
 import com.mimo.companion.domain.dialogue.DialogueManager
 import com.mimo.companion.domain.dialogue.PhraseCategory
+<<<<<<< HEAD
 import com.mimo.companion.domain.custom.CustomPhraseRepository
 import com.mimo.companion.domain.custom.PhraseEvent
 import com.mimo.companion.domain.weather.WeatherRepository
 import com.mimo.companion.custom.CustomPhraseStore
+=======
+import com.mimo.companion.domain.weather.WeatherRepository
+>>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
 import com.mimo.companion.settings.SettingsStore
 import com.mimo.companion.weather.OWMClient
 import com.mimo.companion.weather.WeatherStore
@@ -66,7 +70,10 @@ object Graph {
     lateinit var dailyVerse: com.mimo.companion.domain.verse.DailyVerseRepository; private set
     lateinit var weather: WeatherRepository; private set
     lateinit var weatherSettings: com.mimo.companion.settings.WeatherSettingsStore; private set
+<<<<<<< HEAD
     lateinit var customPhrases: CustomPhraseRepository; private set
+=======
+>>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -114,7 +121,10 @@ object Graph {
             com.mimo.companion.verse.DailyVerseStore(context)
         )
         weatherSettings = com.mimo.companion.settings.WeatherSettingsStore(context)
+<<<<<<< HEAD
         customPhrases = CustomPhraseRepository(CustomPhraseStore(context))
+=======
+>>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
         weather = WeatherRepository(WeatherStore(context)) { lat, lon, apiKey ->
             OWMClient.fetchBlocking(lat, lon, apiKey)   // called from IO thread via buildSnapshotAsync
         }
@@ -193,6 +203,7 @@ object Graph {
             buildSnapshot().copy(weather = weatherData)
         }
 
+<<<<<<< HEAD
     /**
      * The user tapped the companion.
      * Custom TAP phrases take priority over the built-in PhraseBank reply.
@@ -234,6 +245,10 @@ object Graph {
         if (phrases.isEmpty()) return
         scope.launch { presentCustom(phrases.random()) }
     }
+=======
+    /** The user tapped the companion. */
+    fun onTapped() = present(dialogue.reply())
+>>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
 
     /** The app wants to speak on its own (greeting, suggestions...). Silent unless mode/quiet hours/limits allow it. */
     fun maybeSpeak(category: PhraseCategory) = present(dialogue.proactive(category, currentContext()))
@@ -277,6 +292,7 @@ object Graph {
                 }
             }
         }
+<<<<<<< HEAD
     }
 
     /**
@@ -293,6 +309,8 @@ object Graph {
             delay(5_000)
             _bubble.value = null
         }
+=======
+>>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
     }
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
