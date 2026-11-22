@@ -333,7 +333,7 @@ object Graph {
             MoodLevel.STRESSED -> listOf("خذ نفساً عميقاً... كل شيء سيكون بخير 🌸", "أنا هنا إذا احتجتني 💙").random()
             MoodLevel.SAD      -> listOf("أنا معك، الأمور ستتحسن 🤗", "لا بأس أن تشعر بالحزن أحياناً، أنا هنا 💙").random()
         }
-        present(dialogue.reply().copy(text = phrase))
+        showScreenComment(phrase)
     }
 
     /** The user logged a prayer: short acknowledgement when the companion is visible. */
