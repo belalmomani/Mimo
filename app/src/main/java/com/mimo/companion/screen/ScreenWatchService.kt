@@ -25,7 +25,6 @@ import com.mimo.companion.MainActivity
 import com.mimo.companion.R
 import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
-import java.util.Base64
 
 /**
  * "ميمو يرى شاشتك" – MediaProjection foreground service.

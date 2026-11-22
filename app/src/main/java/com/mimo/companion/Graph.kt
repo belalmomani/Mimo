@@ -18,14 +18,14 @@ import com.mimo.companion.domain.dialogue.DialogueContext
 import com.mimo.companion.domain.dialogue.DialogueDecision
 import com.mimo.companion.domain.dialogue.DialogueManager
 import com.mimo.companion.domain.dialogue.PhraseCategory
-<<<<<<< HEAD
+import com.mimo.companion.domain.custom.CustomPhrase
 import com.mimo.companion.domain.custom.CustomPhraseRepository
 import com.mimo.companion.domain.custom.PhraseEvent
+import com.mimo.companion.domain.mood.MoodLevel
+import com.mimo.companion.domain.mood.MoodRepository
+import com.mimo.companion.mood.MoodStore
 import com.mimo.companion.domain.weather.WeatherRepository
 import com.mimo.companion.custom.CustomPhraseStore
-=======
-import com.mimo.companion.domain.weather.WeatherRepository
->>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
 import com.mimo.companion.settings.SettingsStore
 import com.mimo.companion.weather.OWMClient
 import com.mimo.companion.weather.WeatherStore
@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 
 /** Tiny manual DI container (no framework needed for a project this size). Created once in [MimoApp]. */
 object Graph {
@@ -67,13 +68,12 @@ object Graph {
     lateinit var voiceInput: com.mimo.companion.voice.VoiceInputLauncher; private set
     lateinit var contextEngine: com.mimo.companion.context.ContextEngine; private set
     lateinit var focus: com.mimo.companion.focus.FocusManager; private set
+    val pomodoro = com.mimo.companion.focus.PomodoroManager()
     lateinit var dailyVerse: com.mimo.companion.domain.verse.DailyVerseRepository; private set
     lateinit var weather: WeatherRepository; private set
     lateinit var weatherSettings: com.mimo.companion.settings.WeatherSettingsStore; private set
-<<<<<<< HEAD
     lateinit var customPhrases: CustomPhraseRepository; private set
-=======
->>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
+    lateinit var mood: MoodRepository; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -121,10 +121,8 @@ object Graph {
             com.mimo.companion.verse.DailyVerseStore(context)
         )
         weatherSettings = com.mimo.companion.settings.WeatherSettingsStore(context)
-<<<<<<< HEAD
         customPhrases = CustomPhraseRepository(CustomPhraseStore(context))
-=======
->>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
+        mood = MoodRepository(MoodStore(context))
         weather = WeatherRepository(WeatherStore(context)) { lat, lon, apiKey ->
             OWMClient.fetchBlocking(lat, lon, apiKey)   // called from IO thread via buildSnapshotAsync
         }
@@ -138,6 +136,10 @@ object Graph {
         skins = SkinUnlockManager(storage, points, SkinCatalog.ALL)
         rewards = RewardedAdsManager(storage, points, skins, rewardConfig)
         adProvider = if (BuildConfig.ADS_ENABLED) StartIoRewardedProvider(context.applicationContext).also { it.init() } else DisabledRewardedAdProvider
+        // Wire Pomodoro callbacks → ميمو speaks
+        pomodoro.onWorkStart   = { showScreenComment("🎯 يلا نركز! وقت العمل بدأ.") }
+        pomodoro.onBreakStart  = { showScreenComment("☕ أحسنت! خذ راحة قصيرة.") }
+        pomodoro.onSessionDone = { showScreenComment("✅ جولة كاملة، أنت رائع!") }
         startScheduleLoop()
     }
 
@@ -160,6 +162,10 @@ object Graph {
                 // SLEEP: bedtime phrases
                 val sleep = customPhrases.sleepPhrases().filter { it.scheduleHour == h && it.scheduleMin == m }
                 if (sleep.isNotEmpty()) presentCustom(sleep.random())
+                // MOOD: ask once a day at 20:00 if not logged yet
+                if (h == 20 && m == 0 && !mood.loggedToday()) {
+                    showScreenComment("كيف كان يومك اليوم؟ 😊 سجّل مزاجك من الإعدادات")
+                }
             }
         }
     }
@@ -195,7 +201,7 @@ object Graph {
      * Call this from the idle loop (background coroutine); never from the main thread.
      */
     suspend fun buildSnapshotAsync(): com.mimo.companion.domain.context.ContextSnapshot =
-        kotlinx.coroutines.withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             val ws = weatherSettings
             val weatherData = if (ws.enabled && ws.apiKey.isNotBlank()) {
                 weather.current(ws.lat, ws.lon, ws.apiKey) // blocking fetch on IO thread
@@ -203,7 +209,6 @@ object Graph {
             buildSnapshot().copy(weather = weatherData)
         }
 
-<<<<<<< HEAD
     /**
      * The user tapped the companion.
      * Custom TAP phrases take priority over the built-in PhraseBank reply.
@@ -221,7 +226,7 @@ object Graph {
      * Play a custom phrase: uses its linked clip (if any) or TTS.
      * Called for TAP, PRAYER, SLEEP, SCHEDULE events.
      */
-    fun presentCustom(phrase: com.mimo.companion.domain.custom.CustomPhrase) {
+    fun presentCustom(phrase: CustomPhrase) {
         val s = settings.value
         val clip = phrase.clipId?.let { cid -> customVoices.clips.value.firstOrNull { it.id == cid } }
         val tts = { speech.speak(phrase.text, s.dialogue.lang, s.speechRate) }
@@ -245,10 +250,6 @@ object Graph {
         if (phrases.isEmpty()) return
         scope.launch { presentCustom(phrases.random()) }
     }
-=======
-    /** The user tapped the companion. */
-    fun onTapped() = present(dialogue.reply())
->>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
 
     /** The app wants to speak on its own (greeting, suggestions...). Silent unless mode/quiet hours/limits allow it. */
     fun maybeSpeak(category: PhraseCategory) = present(dialogue.proactive(category, currentContext()))
@@ -292,7 +293,6 @@ object Graph {
                 }
             }
         }
-<<<<<<< HEAD
     }
 
     /**
@@ -309,8 +309,6 @@ object Graph {
             delay(5_000)
             _bubble.value = null
         }
-=======
->>>>>>> branch 'main' of https://github.com/belalmomani/Mimo.git
     }
 
     /** The user confirmed a reminder: acknowledge briefly (if the companion is visible and allowed to speak). */
@@ -319,6 +317,23 @@ object Graph {
         val custom = customPhrases.forEvent(PhraseEvent.REMINDER)
         if (custom.isNotEmpty()) presentCustom(custom.random())
         else present(dialogue.reply(PhraseCategory.ACK_DONE))
+    }
+
+    /**
+     * The user logged their mood: ميمو reacts with an appropriate phrase.
+     * Called from the IO thread (MoodScreen saves first, then calls this).
+     */
+    fun onMoodLogged(level: MoodLevel) {
+        if (!com.mimo.companion.overlay.FloatingService.running) return
+        val phrase = when (level) {
+            MoodLevel.GREAT    -> listOf("رائع! يومك يبدو جميلاً 😄", "وااو، مزاجك عالي اليوم! 🎉").random()
+            MoodLevel.GOOD     -> listOf("الحمد لله، يوم جيد 🙂", "ممتاز، استمر في يومك بإيجابية!").random()
+            MoodLevel.OKAY     -> listOf("يوم عادي، لكن أنت تفعل رائعاً 💪", "كل يوم جديد فرصة جديدة 🌟").random()
+            MoodLevel.TIRED    -> listOf("خذ راحة قصيرة، تستحق ذلك 😴", "أنت بذلت جهداً كبيراً، استرح قليلاً").random()
+            MoodLevel.STRESSED -> listOf("خذ نفساً عميقاً... كل شيء سيكون بخير 🌸", "أنا هنا إذا احتجتني 💙").random()
+            MoodLevel.SAD      -> listOf("أنا معك، الأمور ستتحسن 🤗", "لا بأس أن تشعر بالحزن أحياناً، أنا هنا 💙").random()
+        }
+        present(dialogue.reply().copy(text = phrase))
     }
 
     /** The user logged a prayer: short acknowledgement when the companion is visible. */

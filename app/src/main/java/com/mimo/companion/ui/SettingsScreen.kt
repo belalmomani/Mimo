@@ -39,7 +39,9 @@ import com.mimo.companion.speech.CustomVoiceStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -88,11 +90,43 @@ fun SettingsScreen(modifier: Modifier = Modifier, activity: Activity? = null) {
 
         MyVoiceSection(s.voiceSource)
 
+        // ── Pomodoro entry point ──────────────────────────────────────────────
+        var showPomodoro by remember { mutableStateOf(false) }
+        if (showPomodoro) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showPomodoro = false }) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    PomodoroScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showPomodoro = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("⏱ وضع التركيز")
+        }
+
+        // ── Mood tracker entry point ──────────────────────────────────────────
+        var showMood by remember { mutableStateOf(false) }
+        if (showMood) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showMood = false }) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    MoodScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showMood = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("😊 مزاجي اليومي")
+        }
+
         // ── Custom phrases entry point ────────────────────────────────────────
         var showCustomPhrases by remember { mutableStateOf(false) }
         if (showCustomPhrases) {
             androidx.compose.ui.window.Dialog(onDismissRequest = { showCustomPhrases = false }) {
-                Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                     CustomPhrasesScreen()
                 }
             }
