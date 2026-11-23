@@ -74,6 +74,8 @@ object Graph {
     lateinit var weatherSettings: com.mimo.companion.settings.WeatherSettingsStore; private set
     lateinit var customPhrases: CustomPhraseRepository; private set
     lateinit var mood: MoodRepository; private set
+    lateinit var water: com.mimo.companion.water.WaterTracker; private set
+    lateinit var sleep: com.mimo.companion.sleep.SleepTracker; private set
     lateinit var dialogue: DialogueManager; private set
     private lateinit var appContext: Context
     fun appCtx(): Context = appContext
@@ -123,6 +125,8 @@ object Graph {
         weatherSettings = com.mimo.companion.settings.WeatherSettingsStore(context)
         customPhrases = CustomPhraseRepository(CustomPhraseStore(context))
         mood = MoodRepository(MoodStore(context))
+        water = com.mimo.companion.water.WaterTracker(context)
+        sleep = com.mimo.companion.sleep.SleepTracker(context)
         weather = WeatherRepository(WeatherStore(context)) { lat, lon, apiKey ->
             OWMClient.fetchBlocking(lat, lon, apiKey)   // called from IO thread via buildSnapshotAsync
         }
@@ -165,6 +169,23 @@ object Graph {
                 // MOOD: ask once a day at 20:00 if not logged yet
                 if (h == 20 && m == 0 && !mood.loggedToday()) {
                     showScreenComment("كيف كان يومك اليوم؟ 😊 سجّل مزاجك من الإعدادات")
+                }
+                // SLEEP: bedtime and wake reminders
+                if (h == sleep.bedtimeHour && m == sleep.bedtimeMin) {
+                    showScreenComment("🌙 حان وقت النوم! استرح جيداً.")
+                }
+                if (h == sleep.wakeHour && m == sleep.wakeMin) {
+                    showScreenComment("☀️ صباح الخير! يوم جديد مليء بالفرص.")
+                }
+                // QUOTE: share today's quote every morning at 8:00
+                if (h == 8 && m == 0) {
+                    val q = com.mimo.companion.quotes.QuoteBank.todayQuote()
+                    showScreenComment("✨ ${q.text}")
+                }
+                // WATER: remind every hour (between 8am and 10pm) if goal not reached
+                if (m == 0 && h in 8..22 && !water.goalReached()) {
+                    val remaining = water.dailyGoal - water.glasses.value
+                    showScreenComment("💧 لا تنسَ شرب الماء! باقي $remaining كوب لهدفك")
                 }
             }
         }
@@ -334,6 +355,43 @@ object Graph {
             MoodLevel.SAD      -> listOf("أنا معك، الأمور ستتحسن 🤗", "لا بأس أن تشعر بالحزن أحياناً، أنا هنا 💙").random()
         }
         showScreenComment(phrase)
+    }
+
+    /** The user drank a glass of water — ميمو encourages. */
+    fun onWaterDrunk(current: Int, goal: Int) {
+        if (!com.mimo.companion.overlay.FloatingService.running) return
+        val phrase = when {
+            current >= goal -> "🎉 أحسنت! وصلت لهدفك اليوم، أنت رائع!"
+            current == goal / 2 -> "💪 في المنتصف! استمر"
+            else -> listOf("💧 ممتاز!", "أحسنت، كمّل!", "جسمك يشكرك 💙").random()
+        }
+        showScreenComment(phrase)
+    }
+
+    /** The user logged sleep — ميمو reacts based on duration. */
+    fun onSleepLogged(hours: Float) {
+        if (!com.mimo.companion.overlay.FloatingService.running) return
+        val phrase = when {
+            hours >= 8f -> "ممتاز! نمت ${hours.toInt()} ساعات، جسمك شكرك 😴✨"
+            hours >= 6f -> "نمت ${hours.toInt()} ساعات، كافي لكن حاول تزيد قليلاً 🌙"
+            hours > 0f  -> "نمت أقل من المثالي، حاول تنام مبكراً الليلة 💙"
+            else        -> "لا تنسَ تسجيل نومك!"
+        }
+        showScreenComment(phrase)
+    }
+
+    /** Read a quote aloud using TTS. */
+    fun speakQuote(quote: com.mimo.companion.quotes.Quote) {
+        val s = settings.value
+        if (!s.voiceEnabled) return
+        val text = if (quote.author.isNotBlank()) "${quote.text} — ${quote.author}" else quote.text
+        speech.speak(text, s.dialogue.lang, s.speechRate)
+        if (s.showText) _bubble.value = quote.text
+        bubbleJob?.cancel()
+        bubbleJob = scope.launch {
+            delay(400); while (speech.speaking.value) delay(150); delay(2_000)
+            _bubble.value = null
+        }
     }
 
     /** The user logged a prayer: short acknowledgement when the companion is visible. */

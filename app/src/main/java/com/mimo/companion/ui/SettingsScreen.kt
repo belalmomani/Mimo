@@ -90,6 +90,54 @@ fun SettingsScreen(modifier: Modifier = Modifier, activity: Activity? = null) {
 
         MyVoiceSection(s.voiceSource)
 
+        // ── Sleep tracker entry point ─────────────────────────────────────────
+        var showSleep by remember { mutableStateOf(false) }
+        if (showSleep) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showSleep = false }) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    SleepScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showSleep = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("🌙 تتبع النوم")
+        }
+
+        // ── Quote entry point ─────────────────────────────────────────────────
+        var showQuote by remember { mutableStateOf(false) }
+        if (showQuote) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showQuote = false }) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    QuoteScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showQuote = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("✨ اقتباس اليوم")
+        }
+
+        // ── Water tracker entry point ─────────────────────────────────────────
+        var showWater by remember { mutableStateOf(false) }
+        if (showWater) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = { showWater = false }) {
+                Surface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    WaterScreen()
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = { showWater = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("💧 اشرب ماء")
+        }
+
         // ── Pomodoro entry point ──────────────────────────────────────────────
         var showPomodoro by remember { mutableStateOf(false) }
         if (showPomodoro) {
