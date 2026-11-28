@@ -1,78 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Floating companion: the user grants this in system settings; the app never tries to bypass it. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Required by Start.io for apps targeting API 31+ (see the vendor's integration guide). -->
-    <uses-permission android:name="android.permission.AD_ID" />
-    <!-- Coarse location for auto-detecting the nearest city in prayer times.
-         The user is asked at the moment they tap the auto-detect button; nothing runs in the background. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- Microphone for voice-input reminder creation. Asked only when the user taps the mic button. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- Step counter — required on Android 10+ (API 29) to read TYPE_STEP_COUNTER.
-         Asked only when the user opens the Steps tab. No background use. -->
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <!-- Screen capture for "ميمو يرى شاشتك" feature (MediaProjection). User must grant at runtime. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
-    <!-- The step-counter sensor is optional; the Steps tab degrades gracefully if absent. -->
-    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".MimoApp"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Mimo">
 
-        <!-- Start.io is initialised in code (Graph.init -> StartIoRewardedProvider.init) with the id from gradle.properties,
-             so the auto-init provider is removed: the vendor guide says to use exactly ONE initialisation method. -->
-        <provider
-            android:name="com.startapp.sdk.adsbase.StartAppInitProvider"
-            android:authorities="${applicationId}.startappinitprovider"
-            tools:node="remove" />
-
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <receiver android:name=".reminders.ReminderReceiver" android:exported="false" />
-        <receiver android:name=".reminders.BootReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-            </intent-filter>
-        </receiver>
-
         <service
-            android:name=".overlay.FloatingService"
+            android:name=".FloatingService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Displays the user-enabled floating companion character over other apps" />
+                android:value="Mimo floating character overlay" />
         </service>
 
-        <!-- Screen-watch service: runs only while the user has enabled "ميمو يرى شاشتك" -->
-        <service
-            android:name=".screen.ScreenWatchService"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 </manifest>
