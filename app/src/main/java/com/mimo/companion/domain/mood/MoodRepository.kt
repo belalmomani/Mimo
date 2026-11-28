@@ -1,40 +1,23 @@
 package com.mimo.companion.domain.mood
 
+import com.mimo.companion.mood.MoodStore
 import java.time.LocalDate
+import java.util.UUID
 
-/**
- * Domain-layer façade for mood tracking.
- * All methods are synchronous (called from IO thread or test).
- */
-class MoodRepository(private val storage: MoodStorage) {
+class MoodRepository(private val store: MoodStore) {
+    private var cache = store.getAll().toMutableList()
 
-    /** All entries, newest first. */
-    fun all(): List<MoodEntry> = storage.loadAll().sortedByDescending { it.recordedAt }
-
-    /** Entry for today, or null if not logged yet. */
-    fun todayEntry(): MoodEntry? {
-        val today = todayKey()
-        return storage.loadAll().firstOrNull { it.day == today }
+    fun all() = cache.toList()
+    fun todayEntry() = cache.find { it.day == LocalDate.now().toString() }
+    fun loggedToday() = todayEntry() != null
+    fun lastDays(n: Int): List<MoodEntry> {
+        val days = (0 until n).map { LocalDate.now().minusDays(it.toLong()).toString() }
+        return days.mapNotNull { day -> cache.find { it.day == day } }
     }
-
-    /** True if the user has already logged today. */
-    fun loggedToday(): Boolean = todayEntry() != null
-
-    /** Last N days (oldest first) for the chart. */
-    fun lastDays(n: Int = 7): List<MoodEntry> {
-        val all = storage.loadAll().sortedBy { it.recordedAt }
-        return if (all.size <= n) all else all.takeLast(n)
-    }
-
-    /** Save or replace today's entry. */
+    fun currentMood() = todayEntry()?.mood
     fun logToday(mood: MoodLevel, note: String = "") {
-        val existing = todayEntry()
-        if (existing != null) storage.delete(existing.id)
-        storage.save(MoodEntry(day = todayKey(), mood = mood, note = note))
+        cache.removeAll { it.day == LocalDate.now().toString() }
+        cache.add(MoodEntry(UUID.randomUUID().toString(), LocalDate.now().toString(), mood, note, System.currentTimeMillis()))
+        store.save(cache)
     }
-
-    /** Current mood level (today's), or null. */
-    fun currentMood(): MoodLevel? = todayEntry()?.mood
-
-    private fun todayKey(): String = LocalDate.now().toString()   // "YYYY-MM-DD"
 }

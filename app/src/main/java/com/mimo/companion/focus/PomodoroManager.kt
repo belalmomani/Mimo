@@ -6,74 +6,49 @@ import kotlinx.coroutines.flow.StateFlow
 
 enum class PomodoroPhase { IDLE, WORK, BREAK }
 
-data class PomodoroState(
-    val phase: PomodoroPhase = PomodoroPhase.IDLE,
-    val secondsLeft: Int = 0,
-    val round: Int = 0,
-)
+data class PomodoroState(val phase: PomodoroPhase, val secondsLeft: Int, val round: Int)
 
-/**
- * Manages a Pomodoro timer loop.
- * Work = [workMinutes] minutes, Break = [breakMinutes] minutes.
- * Callers observe [state] and pass callbacks for phase transitions.
- */
 class PomodoroManager(
     private val workMinutes: Int = 25,
-    private val breakMinutes: Int = 5,
+    private val breakMinutes: Int = 5
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var timerJob: Job? = null
-
-    private val _state = MutableStateFlow(PomodoroState())
-    val state: StateFlow<PomodoroState> get() = _state
+    private val _state = MutableStateFlow(PomodoroState(PomodoroPhase.IDLE, workMinutes * 60, 0))
+    val state: StateFlow<PomodoroState> = _state
 
     var onWorkStart: (() -> Unit)? = null
     var onBreakStart: (() -> Unit)? = null
     var onSessionDone: (() -> Unit)? = null
 
+    private var job: Job? = null
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     fun start() {
         if (_state.value.phase != PomodoroPhase.IDLE) return
-        runWorkPhase(round = 1)
+        job = scope.launch { runWork() }
     }
 
     fun stop() {
-        timerJob?.cancel()
-        _state.value = PomodoroState()
+        job?.cancel()
+        _state.value = PomodoroState(PomodoroPhase.IDLE, workMinutes * 60, 0)
     }
 
-    val isRunning get() = _state.value.phase != PomodoroPhase.IDLE
-
-    private fun runWorkPhase(round: Int) {
-        timerJob?.cancel()
-        _state.value = PomodoroState(PomodoroPhase.WORK, workMinutes * 60, round)
+    private suspend fun runWork() {
+        val round = _state.value.round + 1
         onWorkStart?.invoke()
-        timerJob = scope.launch {
-            tick(workMinutes * 60) { secondsLeft ->
-                _state.value = _state.value.copy(secondsLeft = secondsLeft)
-            }
-            runBreakPhase(round)
+        for (s in workMinutes * 60 downTo 1) {
+            _state.value = PomodoroState(PomodoroPhase.WORK, s, round)
+            delay(1000)
         }
+        onSessionDone?.invoke()
+        runBreak(round)
     }
 
-    private fun runBreakPhase(round: Int) {
-        _state.value = PomodoroState(PomodoroPhase.BREAK, breakMinutes * 60, round)
+    private suspend fun runBreak(round: Int) {
         onBreakStart?.invoke()
-        timerJob = scope.launch {
-            tick(breakMinutes * 60) { secondsLeft ->
-                _state.value = _state.value.copy(secondsLeft = secondsLeft)
-            }
-            if (isActive) {
-                onSessionDone?.invoke()
-                runWorkPhase(round + 1)
-            }
+        for (s in breakMinutes * 60 downTo 1) {
+            _state.value = PomodoroState(PomodoroPhase.BREAK, s, round)
+            delay(1000)
         }
-    }
-
-    private suspend fun tick(totalSeconds: Int, onTick: (Int) -> Unit) {
-        for (s in totalSeconds downTo 1) {
-            onTick(s)
-            delay(1_000L)
-        }
-        onTick(0)
+        _state.value = PomodoroState(PomodoroPhase.IDLE, workMinutes * 60, round)
     }
 }
