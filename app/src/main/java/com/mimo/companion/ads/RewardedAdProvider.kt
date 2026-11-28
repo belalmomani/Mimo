@@ -3,52 +3,33 @@ package com.mimo.companion.ads
 import android.app.Activity
 
 /**
- * واجهة قابلة للتبديل لمزود إعلانات المكافآت.
+ * What the app needs from a rewarded-ad network. The store never touches an SDK directly:
+ * swapping Start.io for another provider means writing one more implementation of this interface.
  *
- * Start.io SDK v5 لا يدعم Rewarded Ads بشكل موثق.
- * هذه الواجهة تتيح تبديل المزود لاحقاً (AdMob، Unity Ads، إلخ)
- * دون تغيير منطق التطبيق.
+ * Contract: [onRewardEarned] is called AT MOST ONCE per [show], and ONLY when the provider's own
+ * completion signal says the reward conditions were met. Closing early / failing never calls it.
  */
 interface RewardedAdProvider {
-    /** هل الإعلان محمّل وجاهز */
-    val isReady: Boolean
+    val name: String
 
-    /** تحميل إعلان مسبق */
-    fun load()
+    /** True when the SDK is initialised and the provider can be asked to show an ad. */
+    val isAvailable: Boolean
 
-    /**
-     * عرض الإعلان
-     * @param activity النشاط الحالي
-     * @param onRewarded يُستدعى عند إكمال المكافأة بـ adId فريد
-     * @param onDismissed يُستدعى عند إغلاق الإعلان دون مكافأة
-     * @param onFailed يُستدعى عند فشل التحميل أو العرض
-     */
-    fun show(
-        activity: Activity,
-        onRewarded: (adId: String) -> Unit,
-        onDismissed: () -> Unit,
-        onFailed: (reason: String) -> Unit
-    )
+    fun show(activity: Activity, callback: Callback)
+
+    interface Callback {
+        /** The ad session finished with a valid reward. [sessionId] is unique per show() call. */
+        fun onRewardEarned(sessionId: String)
+        /** No ad could be loaded (no fill / offline / SDK error). */
+        fun onUnavailable(reason: String)
+        /** The user left before completion (or the ad ended without a reward signal). */
+        fun onClosedWithoutReward()
+    }
 }
 
-/**
- * مزود وهمي للتطوير — يُحاكي مكافأة بعد تأخير.
- * استبدله بمزود حقيقي عند الإنتاج.
- */
-class StubRewardedAdProvider : RewardedAdProvider {
-    override val isReady: Boolean = true
-
-    override fun load() { /* لا شيء */ }
-
-    override fun show(
-        activity: Activity,
-        onRewarded: (adId: String) -> Unit,
-        onDismissed: () -> Unit,
-        onFailed: (reason: String) -> Unit
-    ) {
-        // في الإنتاج: استبدل بمزود حقيقي
-        // هذا الـ stub يمنح المكافأة مباشرة (للاختبار فقط)
-        val fakeAdId = "stub_${System.currentTimeMillis()}"
-        onRewarded(fakeAdId)
-    }
+/** Used when ads are switched off (ADS_ENABLED=false) or the SDK failed to initialise. */
+object DisabledRewardedAdProvider : RewardedAdProvider {
+    override val name = "disabled"
+    override val isAvailable = false
+    override fun show(activity: Activity, callback: RewardedAdProvider.Callback) = callback.onUnavailable("ads disabled")
 }
