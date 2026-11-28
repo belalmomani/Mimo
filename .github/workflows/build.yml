@@ -17,7 +17,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Generate Gradle Wrapper
+        run: gradle wrapper --gradle-version 8.9
 
       - name: Unit tests (points + store + unlock logic)
         run: ./gradlew testDebugUnitTest --stacktrace
