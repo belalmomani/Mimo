@@ -1,10 +1,13 @@
-name: Build & Test
+name: Build Mimo
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main]
   pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # lets the job attach the APK to a GitHub Release
 
 jobs:
   build:
@@ -17,19 +20,35 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      # No Gradle wrapper is committed yet: this installs the exact Gradle version AGP 8.7 needs.
+      # (Optional: run `gradle wrapper --gradle-version 8.10.2` once on a machine with internet and commit the wrapper.)
+      - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: 8.10.2
 
-      - name: Make gradlew executable
-        run: chmod +x gradlew
-
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.9
-
-      - name: Unit tests (points + store + unlock logic)
-        run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Unit tests (points / store / unlock logic)
+        run: gradle :app:testDebugUnitTest --stacktrace
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle :app:assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mimo-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      # Easy download: every successful build on main gets a pre-release with the debug APK attached
+      # (GitHub -> Releases). The debug APK is signed with the standard Android debug key: fine for installing/testing,
+      # NOT for Google Play (see the note below).
+      - name: Publish APK as a pre-release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-build-${{ github.run_number }}
+          name: Mimo debug build ${{ github.run_number }}
+          prerelease: true
+          files: app/build/outputs/apk/debug/*.apk
+
+      # Release signing is intentionally NOT wired to any committed key. To publish: add a keystore as a GitHub secret,
+      # write keystore.properties in a step (storeFile/storePassword/keyAlias/keyPassword) and run :app:assembleRelease.
