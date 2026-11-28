@@ -10,6 +10,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://android-sdk.start.io") }
     }
 }
 rootProject.name = "Mimo"
